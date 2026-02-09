@@ -276,7 +276,10 @@ $users_all = $pdo->query("SELECT * FROM users WHERE is_active = 1 ORDER BY fulln
                         </div>
 
                         <hr class="my-2">
-
+                        <h6 class="fw-bold text-primary small mb-2">ประวัติการสนทนา</h6>
+                        <div id="comment_history" class="border rounded p-2 mb-2 bg-white" style="height: 250px; overflow-y: auto; background-color: #f8f9fa;">
+                            <div class="text-center text-muted small mt-5">Loading...</div>
+                        </div>
                         <h6 class="fw-bold text-primary small mb-2">ตอบกลับ / บันทึก</h6>
                         <form action="process.php" method="POST">
                             <input type="hidden" name="action" value="comment">
@@ -361,6 +364,21 @@ $users_all = $pdo->query("SELECT * FROM users WHERE is_active = 1 ORDER BY fulln
         document.getElementById('v_tech').innerText = d.tech_name || 'รอจัดสรร';
         document.getElementById('c_tid').value = d.id;
 
+        const historyBox = document.getElementById('comment_history');
+        historyBox.innerHTML = '<div class="d-flex justify-content-center align-items-center h-100 text-muted"><div class="spinner-border spinner-border-sm me-2"></div> กำลังโหลด...</div>';
+        fetch('get_comments.php?ticket_id=' + d.id)
+            .then(response => response.text())
+            .then(html => {
+                historyBox.innerHTML = html;
+                // สั่งให้ Scrollbar เลื่อนลงไปล่างสุดเสมอ เพื่อดูข้อความล่าสุด
+                setTimeout(() => {
+                    historyBox.scrollTop = historyBox.scrollHeight;
+                }, 100);
+            })
+            .catch(err => {
+                historyBox.innerHTML = '<div class="text-center text-danger small mt-3">เกิดข้อผิดพลาดในการโหลดข้อมูล</div>';
+            });
+        // ✅ จบส่วนที่เพิ่ม
         if (d.attachment) {
             document.getElementById('v_img_container').style.display = 'block';
             document.getElementById('v_img').src = '../../uploads/tickets/' + d.attachment;

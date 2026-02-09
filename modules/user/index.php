@@ -353,9 +353,15 @@ $users = $stmt->fetchAll();
                                         <?php endif; ?>
                                     </td>
                                     <td class="text-end pe-3">
-                                        <button class="btn btn-sm btn-light border text-warning py-0 me-1" onclick="openModal('edit', '<?= $json ?>')"><i class="bi bi-pencil"></i></button>
-                                        <button class="btn btn-sm btn-light border text-dark py-0 me-1" onclick="resetPass(<?= $u['id'] ?>, '<?= $u['username'] ?>')" title="รีเซ็ตรหัสผ่าน"><i class="bi bi-key"></i></button>
-                                    </td>
+    <button class="btn btn-sm btn-light border text-warning py-0 me-1 shadow-sm" onclick="openModal('edit', '<?= $json ?>')">
+        <i class="bi bi-pencil"></i>
+    </button>
+    
+    <button class="btn btn-sm btn-light border text-dark py-0 me-1 shadow-sm" onclick="resetPass(<?= $u['id'] ?>, '<?= $u['username'] ?>')">
+        <i class="bi bi-key"></i>
+    </button>
+    
+    </td>
                                 </tr>
                                 <?php endforeach; ?>
                             </tbody>

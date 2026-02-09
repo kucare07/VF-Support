@@ -42,15 +42,35 @@ $cats = $pdo->query("SELECT * FROM kb_categories")->fetchAll();
 ?>
 
 <?php require_once '../../includes/header.php'; ?>
+
 <link href="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.css" rel="stylesheet">
-<script src="https://code.jquery.com/jquery-3.4.1.slim.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.js"></script>
+
+<style>
+    /* แก้ Bug Summernote ซ้อนทับกับ Bootstrap Modal */
+    .note-modal-backdrop {
+        z-index: 1050; /* ให้ Backdrop ของ Summernote อยู่ระดับเดียวกับ Modal */
+    }
+    .note-modal-content {
+        z-index: 1060; /* ให้ Popup ของ Summernote (ใส่รูป/ลิงก์) อยู่เหนือ Modal */
+    }
+    /* ปรับแต่งการ์ด */
+    .hover-shadow:hover {
+        transform: translateY(-3px);
+        transition: all 0.3s ease;
+        box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important;
+    }
+    .article-content img {
+        max-width: 100%;
+        height: auto;
+        border-radius: 5px;
+        margin: 10px 0;
+    }
+</style>
 
 <?php require_once '../../includes/sidebar.php'; ?>
 
 <div id="page-content-wrapper">
     <nav class="main-navbar">
-        
         <span class="fw-bold text-dark">Knowledge Base</span>
         <span class="text-muted ms-2 small border-start ps-2">ฐานความรู้ / คู่มือการแก้ปัญหา</span>
     </nav>
@@ -91,7 +111,9 @@ $cats = $pdo->query("SELECT * FROM kb_categories")->fetchAll();
 
                 <div class="col-md-9">
                     <?php if(isset($_GET['msg'])): ?>
-                        <div class="alert alert-success py-2 small mb-3">ดำเนินการสำเร็จ!</div>
+                        <div class="alert alert-success py-2 small mb-3">
+                            <i class="bi bi-check-circle-fill me-2"></i>ดำเนินการสำเร็จ!
+                        </div>
                     <?php endif; ?>
 
                     <div class="row g-3">
@@ -149,7 +171,7 @@ $cats = $pdo->query("SELECT * FROM kb_categories")->fetchAll();
 <div class="modal fade" id="editorModal" tabindex="-1" data-bs-backdrop="static">
     <div class="modal-dialog modal-xl">
         <div class="modal-content">
-            <form action="process.php" method="POST">
+            <form action="process.php" method="POST" id="kbForm">
                 <input type="hidden" name="action" id="kb_action">
                 <input type="hidden" name="id" id="kb_id">
                 <div class="modal-header bg-primary text-white py-2">
@@ -159,9 +181,11 @@ $cats = $pdo->query("SELECT * FROM kb_categories")->fetchAll();
                 <div class="modal-body bg-light">
                     <div class="row g-2 mb-3">
                         <div class="col-md-8">
-                            <input type="text" name="title" id="title" class="form-control" placeholder="หัวข้อบทความ (Topic)" required>
+                            <label class="form-label small fw-bold">หัวข้อ (Topic) *</label>
+                            <input type="text" name="title" id="title" class="form-control" placeholder="เช่น วิธีแก้ไข Printer ไม่ออก" required>
                         </div>
                         <div class="col-md-4">
+                            <label class="form-label small fw-bold">หมวดหมู่ *</label>
                             <select name="category_id" id="category_id" class="form-select" required>
                                 <option value="">-- เลือกหมวดหมู่ --</option>
                                 <?php foreach($cats as $c): ?>
@@ -175,7 +199,7 @@ $cats = $pdo->query("SELECT * FROM kb_categories")->fetchAll();
 
                     <div class="form-check mt-3">
                         <input class="form-check-input" type="checkbox" name="is_public" id="is_public" value="1" checked>
-                        <label class="form-check-label" for="is_public">เผยแพร่สาธารณะ (Public) - ผู้ใช้งานทั่วไปสามารถเห็นได้</label>
+                        <label class="form-check-label" for="is_public">เผยแพร่สาธารณะ (Public)</label>
                     </div>
                 </div>
                 <div class="modal-footer py-2">
@@ -211,69 +235,85 @@ $cats = $pdo->query("SELECT * FROM kb_categories")->fetchAll();
 
 <?php require_once '../../includes/footer.php'; ?>
 
+<script src="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.js"></script>
+
 <script>
     var editorModal, viewModal;
 
     $(document).ready(function() {
-        // Init Summernote
+        // 1. Init Summernote (ตั้งค่าให้รองรับภาษาไทย + ปุ่มพื้นฐาน)
         $('#summernote').summernote({
-            placeholder: 'เขียนรายละเอียดขั้นตอนการแก้ปัญหา...',
+            placeholder: 'เขียนรายละเอียดขั้นตอนการแก้ปัญหาที่นี่...',
             tabsize: 2,
             height: 400,
+            dialogsInBody: true, // สำคัญ! ช่วยแก้ปัญหา Modal ซ้อนกัน
             toolbar: [
                 ['style', ['style', 'bold', 'italic', 'underline', 'clear']],
                 ['font', ['strikethrough', 'superscript', 'subscript']],
                 ['fontsize', ['fontsize']],
                 ['color', ['color']],
                 ['para', ['ul', 'ol', 'paragraph']],
-                ['insert', ['link', 'picture', 'table', 'hr']], // เพิ่มปุ่มแทรกรูปและตาราง
-                ['view', ['fullscreen', 'codeview', 'help']]
-            ]
+                ['insert', ['link', 'picture', 'table', 'hr']],
+                ['view', ['fullscreen', 'codeview']]
+            ],
+            callbacks: {
+                onImageUpload: function(files) {
+                    // (Optional) ตรงนี้ถ้าจะทำอัปโหลดรูปจริงต้องเขียน AJAX เพิ่ม
+                    // ตอนนี้ใช้แบบ Base64 Default ไปก่อน
+                }
+            }
         });
 
-        // Init Modals
+        // 2. Init Modals
         editorModal = new bootstrap.Modal(document.getElementById('editorModal'));
         viewModal = new bootstrap.Modal(document.getElementById('viewModal'));
     });
 
+    // ฟังก์ชันเปิดหน้าเขียนบทความ
     function openEditor(action, json = null) {
         document.getElementById('kb_action').value = action;
         document.getElementById('editorTitle').innerText = (action == 'add' ? 'เขียนบทความใหม่' : 'แก้ไขบทความ');
         
         // Reset Form
+        document.getElementById('kbForm').reset();
         document.getElementById('kb_id').value = '';
-        document.getElementById('title').value = '';
-        document.getElementById('category_id').value = '';
-        $('#summernote').summernote('code', ''); // Reset Editor
+        $('#summernote').summernote('code', ''); // ล้างค่า Editor
         document.getElementById('is_public').checked = true;
 
+        // กรณีแก้ไข (Edit)
         if (json) {
             const d = JSON.parse(json);
             document.getElementById('kb_id').value = d.id;
             document.getElementById('title').value = d.title;
             document.getElementById('category_id').value = d.category_id;
-            $('#summernote').summernote('code', d.content); // Set Content
+            $('#summernote').summernote('code', d.content); // ใส่ข้อมูลลง Editor
             document.getElementById('is_public').checked = (d.is_public == 1);
         }
         editorModal.show();
     }
 
+    // ฟังก์ชันเปิดอ่านบทความ
     function openView(json) {
         const d = JSON.parse(json);
         document.getElementById('v_title').innerText = d.title;
-        document.getElementById('v_cat').innerText = d.cat_name;
-        document.getElementById('v_date').innerText = d.updated_at;
+        document.getElementById('v_cat').innerText = d.cat_name || '-';
+        document.getElementById('v_date').innerText = d.updated_at; // หรือจะ Format วันที่ใหม่ก็ได้
         document.getElementById('v_author').innerText = d.author_name;
-        document.getElementById('v_content').innerHTML = d.content; // Render HTML
+        document.getElementById('v_content').innerHTML = d.content;
         
-        // นับยอดวิว (ส่ง Ajax ไปอัปเดตเงียบๆ)
+        // นับยอดวิว (ส่ง Ajax เงียบๆ)
         fetch('process.php?action=count_view&id=' + d.id);
 
         viewModal.show();
     }
 
-    document.getElementById('menu-toggle').addEventListener('click', function(e) {
-        e.preventDefault();
-        document.getElementById('sidebar-wrapper').classList.toggle('active');
-    });
+    // Toggle Sidebar (ถ้า Footer ไม่มี)
+    /*
+    if(document.getElementById('menu-toggle')){
+        document.getElementById('menu-toggle').addEventListener('click', function(e) {
+            e.preventDefault();
+            document.getElementById('sidebar-wrapper').classList.toggle('active');
+        });
+    }
+    */
 </script>

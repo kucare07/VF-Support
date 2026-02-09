@@ -175,11 +175,16 @@ $assets = $stmt->fetchAll();
                                                 ?><span class="badge bg-<?= $st_color ?>"><?= $st_text ?></span></td>
                                             <td><?= $item['owner_name'] ?: '-' ?></td>
                                             <td class="text-end pe-3">
-                                                <a href="print_qr.php?id=<?= $item['id'] ?>" target="_blank" class="btn btn-sm btn-light border py-0 me-1" title="พิมพ์ QR Code"><i class="bi bi-qr-code"></i></a>
+                                                <a href="print_qr.php?id=<?= $item['id'] ?>" target="_blank" class="btn btn-sm btn-light border py-0 me-1 shadow-sm"><i class="bi bi-qr-code"></i></a>
 
-                                                <button class="btn btn-sm btn-light border text-info py-0 me-1" onclick="openViewModal('<?= $jsonData ?>')"><i class="bi bi-eye"></i></button>
-                                                <button class="btn btn-sm btn-light border text-warning py-0 me-1" onclick="openEditModal('<?= $jsonData ?>')"><i class="bi bi-pencil"></i></button>
-                                                <button class="btn btn-sm btn-light border text-danger py-0" onclick="confirmDelete(<?= $item['id'] ?>, '<?= $item['asset_code'] ?>')"><i class="bi bi-trash"></i></button>
+                                                <button class="btn btn-sm btn-light border text-info py-0 me-1 shadow-sm" onclick="openViewModal('<?= $jsonData ?>')"><i class="bi bi-eye"></i></button>
+
+                                                <button class="btn btn-sm btn-light border text-warning py-0 me-1 shadow-sm" onclick="openEditModal('<?= $jsonData ?>')"><i class="bi bi-pencil"></i></button>
+
+                                                <button class="btn btn-sm btn-light border text-danger py-0 shadow-sm"
+                                                    onclick="confirmDelete('process.php?action=delete&id=<?= $item['id'] ?>', 'ต้องการลบ <?= $item['asset_code'] ?> ใช่หรือไม่?')">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
                                             </td>
                                         </tr>
                                     <?php endforeach; ?>
@@ -493,20 +498,6 @@ $assets = $stmt->fetchAll();
     function loadSoftware(id) {
         fetch('get_software.php?id=' + id).then(r => r.text()).then(h => {
             document.getElementById('software_body').innerHTML = h;
-        });
-    }
-
-    function confirmDelete(id, code) {
-        Swal.fire({
-            title: 'ยืนยันลบ?',
-            text: `ต้องการลบ ${code} ใช่หรือไม่?`,
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#d33',
-            confirmButtonText: 'ลบ',
-            cancelButtonText: 'ยกเลิก'
-        }).then((result) => {
-            if (result.isConfirmed) window.location.href = `process.php?action=delete&id=${id}`;
         });
     }
 

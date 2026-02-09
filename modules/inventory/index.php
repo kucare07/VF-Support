@@ -81,11 +81,17 @@ $items = $pdo->query($sql)->fetchAll();
                                         <td><?= $status_badge ?></td>
                                         <td class="text-end pe-3">
                                             <div class="btn-group" role="group">
-                                                <button class="btn btn-sm btn-outline-success bg-white" onclick="openStockModal(<?= $row['id'] ?>, 'in', '<?= $row['name'] ?>')" title="เติมของ (Stock In)"><i class="bi bi-plus-lg"></i></button>
-                                                <button class="btn btn-sm btn-outline-danger bg-white" onclick="openStockModal(<?= $row['id'] ?>, 'out', '<?= $row['name'] ?>')" title="เบิกของ (Stock Out)"><i class="bi bi-dash-lg"></i></button>
+                                                <button class="btn btn-sm btn-outline-success bg-white shadow-sm" onclick="openStockModal(<?= $row['id'] ?>, 'in', '<?= htmlspecialchars($row['name']) ?>')"><i class="bi bi-plus-lg"></i></button>
+                                                <button class="btn btn-sm btn-outline-danger bg-white shadow-sm" onclick="openStockModal(<?= $row['id'] ?>, 'out', '<?= htmlspecialchars($row['name']) ?>')"><i class="bi bi-dash-lg"></i></button>
                                             </div>
-                                            <button class="btn btn-sm btn-light border text-warning ms-1" onclick="openItemModal('edit', '<?= $json ?>')" title="แก้ไข"><i class="bi bi-pencil"></i></button>
-                                            <a href="process.php?action=delete&id=<?= $row['id'] ?>" class="btn btn-sm btn-light border text-secondary ms-1" onclick="return confirm('ยืนยันลบรายการนี้?')" title="ลบ"><i class="bi bi-trash"></i></a>
+
+                                            <button class="btn btn-sm btn-light border text-warning ms-1 shadow-sm" onclick="openItemModal('edit', '<?= $json ?>')">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+
+                                            <button class="btn btn-sm btn-light border text-secondary ms-1 shadow-sm" onclick="confirmDelete('process.php?action=delete&id=<?= $row['id'] ?>')">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
