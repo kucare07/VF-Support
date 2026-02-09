@@ -1,261 +1,138 @@
-/* Import Google Fonts */
+/* assets/css/style.css */
 @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
 
 :root {
+    --font-family-base: 'Sarabun', sans-serif;
+    --sidebar-width: 230px; /* ลดความกว้าง Sidebar (เดิม 260px) */
+    --sidebar-bg: #212529;
     --primary-color: #0d6efd;
-    --primary-light: rgba(13, 110, 253, 0.1);
-    --sidebar-width: 250px;
-    --sidebar-bg: #1e293b;     /* สี Slate-900 */
-    --card-radius: 12px;       /* มุมโค้งมน ทันสมัย */
-    --font-size-base: 0.9rem;  /* ~14.5px (อ่านง่ายกำลังดี) */
-    --transition-speed: 0.3s;  /* ความเร็ว Animation */
+    --text-color: #333;
+    --header-height: 50px; /* ลดความสูง Navbar (เดิม 60px) */
 }
 
-/* ===========================
-   Global Styles & Animations
-   =========================== */
 body {
-    font-family: 'Sarabun', sans-serif;
-    background-color: #f1f5f9; /* สีพื้นหลังโทนเย็นสบายตา */
-    font-size: var(--font-size-base);
-    color: #334155;
-    overflow-x: hidden;
-    line-height: 1.5;
+    font-family: var(--font-family-base);
+    background-color: #f5f7fa;
+    color: var(--text-color);
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    overflow: hidden;
+    font-size: 0.8rem; /* ✅ ลดขนาดตัวอักษรลง (เดิม 0.9rem) */
 }
 
-/* Animation: เนื้อหาค่อยๆ ลอยขึ้นเมื่อโหลดหน้า */
-@keyframes fadeInUp {
-    from { opacity: 0; transform: translateY(15px); }
-    to { opacity: 1; transform: translateY(0); }
-}
+/* --- LAYOUT --- */
+#wrapper { display: flex; width: 100%; height: 100vh; overflow: hidden; }
 
-#page-content-wrapper {
-    width: 100%;
-    min-height: 100vh;
-    transition: margin var(--transition-speed) ease-out;
-    animation: fadeInUp 0.5s ease-out; /* เรียกใช้ Animation */
-}
-
-a { text-decoration: none; transition: all 0.2s; }
-
-/* ===========================
-   Sidebar Styling
-   =========================== */
+/* Sidebar */
 #sidebar-wrapper {
-    min-height: 100vh;
     width: var(--sidebar-width);
-    margin-left: calc(var(--sidebar-width) * -1);
+    min-width: var(--sidebar-width);
     background-color: var(--sidebar-bg);
     color: #fff;
-    transition: margin var(--transition-speed) ease-out;
-    position: fixed;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
     z-index: 1000;
-    box-shadow: 4px 0 15px rgba(0,0,0,0.1);
+    transition: margin 0.25s ease-out;
 }
 
-#sidebar-wrapper .sidebar-heading {
-    padding: 1.2rem 1.5rem;
-    font-size: 1.15rem;
-    font-weight: 700;
-    color: #fff;
-    border-bottom: 1px solid rgba(255,255,255,0.08);
-    display: flex; align-items: center; gap: 10px;
-    letter-spacing: 0.5px;
+.sidebar-heading { 
+    height: var(--header-height); 
+    display: flex; 
+    align-items: center; 
+    padding: 0 1rem; 
+    font-weight: bold; 
+    font-size: 1rem; /* ลดขนาดหัวข้อ */
+    border-bottom: 1px solid rgba(255,255,255,0.1); 
+    flex-shrink: 0; 
 }
 
-/* เมนูใน Sidebar */
-#sidebar-wrapper .list-group-item {
-    background-color: transparent;
-    color: #94a3b8;
-    border: none;
-    padding: 0.75rem 1.5rem;
-    font-size: 0.9rem;
-    font-weight: 500;
-    transition: all 0.2s;
-    border-left: 4px solid transparent;
-    margin-bottom: 2px;
+.sidebar-content { flex-grow: 1; overflow-y: auto; overflow-x: hidden; padding: 0.5rem 0; }
+.sidebar-content::-webkit-scrollbar { width: 4px; }
+.sidebar-content::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
+
+.sidebar-footer { 
+    padding: 0.75rem; 
+    border-top: 1px solid rgba(255,255,255,0.1); 
+    background-color: #1a1d20; 
+    flex-shrink: 0; 
 }
 
-#sidebar-wrapper .list-group-item:hover {
-    background-color: rgba(255,255,255,0.06);
-    color: #fff;
-    padding-left: 1.8rem; /* ลูกเล่น: ขยับขวาเล็กน้อยเมื่อชี้ */
+/* Sidebar Menu (Compact) */
+#sidebar-wrapper .list-group-item { 
+    background: transparent; 
+    color: rgba(255,255,255,0.8); 
+    border: none; 
+    padding: 0.4rem 1rem; /* ✅ ลดระยะห่างเมนู */
+    font-size: 0.85rem; 
+    display: flex; 
+    align-items: center; 
+    transition: 0.2s; 
 }
-
-#sidebar-wrapper .list-group-item.active {
-    background-color: var(--primary-light);
-    color: #60a5fa;
-    border-left-color: #60a5fa;
-    font-weight: 600;
+#sidebar-wrapper .list-group-item:hover { color: #fff; background: rgba(255,255,255,0.08); padding-left: 1.2rem; }
+#sidebar-wrapper .list-group-item.active { color: var(--primary-color); font-weight: 600; background: rgba(13, 110, 253, 0.1); }
+.sidebar-header-label { 
+    font-size: 0.7rem; 
+    font-weight: 700; 
+    color: #6c757d; 
+    margin: 1rem 0 0.2rem 1rem; 
+    letter-spacing: 0.5px; 
 }
+.submenu-item { padding-left: 2.5rem !important; font-size: 0.8rem; }
 
-#sidebar-wrapper .list-group-item i {
-    width: 24px; text-align: center; margin-right: 8px; font-size: 1.1rem;
+/* Main Content */
+#page-content-wrapper { flex: 1; display: flex; flex-direction: column; min-width: 0; height: 100vh; }
+.main-navbar { 
+    height: var(--header-height); 
+    background: #fff; 
+    border-bottom: 1px solid #e0e0e0; 
+    display: flex; 
+    align-items: center; 
+    padding: 0 1rem; 
+    flex-shrink: 0; 
 }
+.main-content-scroll { flex-grow: 1; overflow-y: auto; padding: 1rem; /* ลด Padding ขอบจอ */ }
 
-.sidebar-label {
-    padding: 1.5rem 1.5rem 0.5rem;
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    color: #64748b;
-    font-weight: 700;
+/* --- COMPACT UI ELEMENTS --- */
+/* Card (กล่อง) */
+.card { 
+    border: none; 
+    border-radius: 6px; 
+    box-shadow: 0 2px 4px rgba(0,0,0,0.03); 
+    margin-bottom: 1rem; /* ลดระยะห่างระหว่างกล่อง */
 }
-
-/* ===========================
-   Responsive Sidebar Logic
-   =========================== */
-@media (min-width: 768px) {
-    #sidebar-wrapper { margin-left: 0; }
-    #page-content-wrapper { margin-left: var(--sidebar-width); width: calc(100% - var(--sidebar-width)); }
-    #sidebar-wrapper.toggled { margin-left: calc(var(--sidebar-width) * -1); }
-    #page-content-wrapper.toggled { margin-left: 0; width: 100%; }
-}
-
-@media (max-width: 768px) {
-    #sidebar-wrapper.active { margin-left: 0; }
-    #sidebar-wrapper.active::before { content: ''; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: -1; backdrop-filter: blur(2px); }
-}
-
-/* ===========================
-   Cards & UI Components
-   =========================== */
-.card {
-    border: none;
-    border-radius: var(--card-radius);
-    background: #fff;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.03); /* เงาพื้นฐานจางๆ */
-    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease; /* Animation เด้งดึ๋ง */
-    margin-bottom: 1.5rem;
-    overflow: hidden;
-}
-
-/* ลูกเล่น: เอาเมาส์ชี้การ์ดแล้วลอยขึ้น + เงาเข้มขึ้น */
-.card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 10px 25px rgba(0,0,0,0.08);
-}
-
-/* ยกเว้น Card บางอันที่ไม่ต้องการให้ลอย (เช่น Layout หลัก) */
-.card.no-hover:hover { transform: none; box-shadow: 0 2px 10px rgba(0,0,0,0.03); }
-
-.card-header {
-    background-color: #fff;
-    border-bottom: 1px solid #f1f5f9;
-    padding: 1rem 1.5rem;
-    font-weight: 700;
-    color: #475569;
-}
-
-.card-body { padding: 1.5rem; }
-
-/* Buttons with Ripple Effect feel */
-.btn {
-    font-size: 0.9rem;
-    padding: 0.5rem 1rem;
-    border-radius: 8px;
-    font-weight: 500;
-    transition: all 0.2s;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-}
-
-.btn:hover { transform: translateY(-1px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
-.btn:active { transform: translateY(1px); box-shadow: none; } /* กดแล้วยุบ */
-
-.form-control, .form-select {
-    font-size: 0.9rem;
-    padding: 0.6rem 1rem;
-    border-radius: 8px;
-    border: 1px solid #e2e8f0;
-    transition: all 0.2s;
-}
-
-/* ลูกเล่น: ช่องกรอกข้อมูลเรืองแสงเมื่อกด */
-.form-control:focus, .form-select:focus {
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
-}
-
-/* ===========================
-   Tables
-   =========================== */
-.table { font-size: 0.9rem; vertical-align: middle; }
-.table thead th { 
-    background-color: #f8fafc; 
-    color: #64748b; 
+.card-header { 
+    background: #fff; 
+    border-bottom: 1px solid #f0f0f0; 
+    padding: 0.6rem 1rem; /* ✅ หัวข้อกล่องเล็กลง */
     font-weight: 600; 
-    text-transform: uppercase; 
-    font-size: 0.8rem; 
-    border-bottom: 2px solid #e2e8f0;
+    font-size: 0.9rem;
 }
-/* ลูกเล่น: แถวในตารางเปลี่ยนสีเมื่อชี้ */
-.table-hover tbody tr:hover {
-    background-color: #f1f5f9;
-    transition: background-color 0.2s;
+.card-body { 
+    padding: 0.8rem; /* ✅ เนื้อหากล่องกระชับขึ้น */
 }
 
-/* ===========================
-   Dashboard Specifics
-   =========================== */
-.card-counter {
-    padding: 1.5rem;
-    height: 100%;
-    display: flex; flex-direction: column; justify-content: center;
+/* Typography & Buttons */
+h2, .h2, .display-6 { font-size: 1.5rem !important; } /* ลดขนาดตัวเลขใหญ่ */
+h4, .h4 { font-size: 1.1rem !important; }
+h5, .h5 { font-size: 1rem !important; }
+h6, .h6 { font-size: 0.85rem !important; }
+
+.btn { font-size: 0.8rem; padding: 0.3rem 0.6rem; }
+.btn-sm { font-size: 0.75rem; padding: 0.2rem 0.4rem; }
+.form-control, .form-select { font-size: 0.8rem; padding: 0.3rem 0.5rem; }
+.badge { font-weight: 500; font-size: 0.7rem; padding: 0.35em 0.5em; }
+
+/* Table Compact */
+.table th, .table td { 
+    padding: 0.4rem 0.5rem; /* ✅ ตารางแน่นขึ้น */
+    vertical-align: middle; 
+    font-size: 0.8rem;
 }
-.card-counter h3 { font-size: 1.75rem; font-weight: 800; margin-bottom: 0.25rem; }
-.card-counter .label { font-size: 0.85rem; font-weight: 600; text-transform: uppercase; color: #94a3b8; letter-spacing: 0.5px; }
 
-.icon-box {
-    width: 50px; height: 50px;
-    border-radius: 12px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 1.5rem;
-    flex-shrink: 0;
-    transition: transform 0.3s;
-}
-/* ลูกเล่น: หมุนไอคอนนิดๆ เมื่อชี้การ์ดแม่ */
-.card-counter:hover .icon-box { transform: scale(1.1) rotate(5deg); }
-
-.bg-icon-primary { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
-.bg-icon-success { background: rgba(34, 197, 94, 0.1); color: #22c55e; }
-.bg-icon-warning { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
-.bg-icon-purple  { background: rgba(168, 85, 247, 0.1); color: #a855f7; }
-.bg-icon-info    { background: rgba(6, 182, 212, 0.1); color: #06b6d4; }
-
-/* Status Box Styles */
-.status-box {
-    border-radius: 10px;
-    padding: 1rem 1.25rem;
-    height: 100%;
-    border-left: 4px solid transparent;
-    background: #fff;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.04);
-    transition: transform 0.2s;
-}
-.status-box:hover { transform: translateY(-3px); }
-
-.status-box .stat-number { font-size: 1.5rem; font-weight: 800; }
-.status-box .stat-label { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: #64748b; margin-bottom: 2px; }
-.status-box .stat-desc { font-size: 0.9rem; font-weight: 500; }
-
-.status-new { background: #fffbeb; border-left-color: #f59e0b; } .status-new .stat-number { color: #f59e0b; }
-.status-processing { background: #eff6ff; border-left-color: #3b82f6; } .status-processing .stat-number { color: #3b82f6; }
-.status-pending { background: #fef2f2; border-left-color: #ef4444; } .status-pending .stat-number { color: #ef4444; }
-.status-done { background: #f0fdf4; border-left-color: #22c55e; } .status-done .stat-number { color: #22c55e; }
-
-/* ===========================
-   Miscellaneous
-   =========================== */
-.badge { padding: 0.5em 0.75em; border-radius: 6px; font-weight: 600; letter-spacing: 0.3px; }
-.navbar { box-shadow: 0 2px 10px rgba(0,0,0,0.03); background: rgba(255,255,255,0.95); backdrop-filter: blur(5px); }
-
-/* Form Titles with Accent */
-.form-section-title {
-    font-size: 1rem; font-weight: 700; color: #334155; margin-bottom: 1.25rem;
-    display: flex; align-items: center;
-}
-.form-section-title::before {
-    content: ''; display: inline-block; width: 4px; height: 20px;
-    background: linear-gradient(to bottom, #f97316, #fb923c); /* ไล่สีส้ม */
-    margin-right: 10px; border-radius: 4px;
+/* Responsive */
+@media (max-width: 768px) {
+    #sidebar-wrapper { margin-left: calc(var(--sidebar-width) * -1); position: fixed; height: 100%; box-shadow: 0 0 15px rgba(0,0,0,0.2); }
+    #sidebar-wrapper.active { margin-left: 0; }
 }

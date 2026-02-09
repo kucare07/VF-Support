@@ -1,67 +1,83 @@
 <?php
-// modules/user/process.php
 require_once '../../includes/auth.php';
 requireAdmin();
 require_once '../../config/db_connect.php';
+require_once '../../includes/functions.php'; // ✅ เรียกใช้ฟังก์ชัน Log
 
-// 1. จัดการการ "ลบข้อมูล" (Delete)
-if (isset($_GET['action']) && $_GET['action'] == 'delete' && isset($_GET['id'])) {
-    $id = $_GET['id'];
-    try {
-        $stmt = $pdo->prepare("DELETE FROM users WHERE id = ?");
-        $stmt->execute([$id]);
-        header("Location: index.php?msg=deleted");
-    } catch (PDOException $e) {
-        header("Location: index.php?error=" . urlencode($e->getMessage()));
-    }
-    exit();
-}
+$action = $_REQUEST['action'] ?? '';
+$current_user_id = $_SESSION['user_id']; // ไอดีคนทำรายการ (Admin)
 
-// 2. จัดการการ "เพิ่ม" และ "แก้ไข" (Add & Edit)
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $action = $_POST['action']; // รับค่าว่าเป็น add หรือ edit
+// --- ADD: เพิ่มผู้ใช้ ---
+if ($action == 'add') {
+    // เช็ค Username ซ้ำ
+    $chk = $pdo->prepare("SELECT id FROM users WHERE username = ?");
+    $chk->execute([$_POST['username']]);
+    if ($chk->fetch()) { header("Location: index.php?error=duplicate"); exit(); }
+
+    $passHash = password_hash($_POST['password'], PASSWORD_DEFAULT);
+    $active = isset($_POST['is_active']) ? 1 : 0;
+    $dept = !empty($_POST['department_id']) ? $_POST['department_id'] : null;
+
+    // ✅ ใช้ column 'password_hash' ให้ตรงกับ Login
+    $sql = "INSERT INTO users (username, password_hash, fullname, email, department_id, role, is_active) VALUES (?, ?, ?, ?, ?, ?, ?)";
+    $pdo->prepare($sql)->execute([$_POST['username'], $passHash, $_POST['fullname'], $_POST['email'], $dept, $_POST['role'], $active]);
     
-    $username = trim($_POST['username']);
-    $fullname = trim($_POST['fullname']);
-    $role = $_POST['role'];
-    $department_id = $_POST['department_id'] ?: null;
-    $is_active = isset($_POST['is_active']) ? 1 : 0;
+    // ✅ บันทึก Log
+    logActivity($pdo, $current_user_id, 'INSERT', 'เพิ่มผู้ใช้งานใหม่: ' . $_POST['username']);
 
-    try {
-        if ($action == 'add') {
-            // --- โหมดเพิ่มข้อมูลใหม่ ---
-            $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
-            $sql = "INSERT INTO users (username, password_hash, fullname, role, department_id, is_active) VALUES (?, ?, ?, ?, ?, ?)";
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute([$username, $password, $fullname, $role, $department_id, 1]); // Default Active
-            $msg = "added";
-
-        } elseif ($action == 'edit') {
-            // --- โหมดแก้ไขข้อมูล ---
-            $id = $_POST['id'];
-            
-            // เช็คว่ามีการเปลี่ยนรหัสผ่านไหม
-            $password_sql = "";
-            $params = [$fullname, $role, $department_id, $is_active];
-            
-            if (!empty($_POST['password'])) {
-                $password_sql = ", password_hash = ?";
-                $params[] = password_hash($_POST['password'], PASSWORD_DEFAULT);
-            }
-            
-            $params[] = $id; // ปิดท้ายด้วย ID สำหรับ WHERE
-
-            $sql = "UPDATE users SET fullname = ?, role = ?, department_id = ?, is_active = ? $password_sql WHERE id = ?";
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute($params);
-            $msg = "updated";
-        }
-
-        header("Location: index.php?msg=$msg");
-
-    } catch (PDOException $e) {
-        header("Location: index.php?error=" . urlencode($e->getMessage()));
-    }
-    exit();
+    header("Location: index.php?msg=added");
 }
-?>
+
+// --- EDIT: แก้ไขผู้ใช้ ---
+elseif ($action == 'edit') {
+    $id = $_POST['id'];
+    $active = isset($_POST['is_active']) ? 1 : 0;
+    $dept = !empty($_POST['department_id']) ? $_POST['department_id'] : null;
+
+    // ดึงชื่อเก่ามาเก็บไว้ใน Log (Option) หรือแค่บอกว่าแก้ ID ไหนก็ได้
+    $old_data = $pdo->prepare("SELECT username FROM users WHERE id = ?");
+    $old_data->execute([$id]);
+    $target_user = $old_data->fetch();
+
+    // ถ้ามีการกรอกรหัสผ่านใหม่ ให้เปลี่ยนด้วย
+    if (!empty($_POST['password'])) {
+        $passHash = password_hash($_POST['password'], PASSWORD_DEFAULT);
+        $sql = "UPDATE users SET fullname=?, email=?, department_id=?, role=?, is_active=?, password_hash=? WHERE id=?";
+        $pdo->prepare($sql)->execute([$_POST['fullname'], $_POST['email'], $dept, $_POST['role'], $active, $passHash, $id]);
+        
+        // ✅ Log (เปลี่ยนรหัสด้วย)
+        logActivity($pdo, $current_user_id, 'UPDATE', 'แก้ไขข้อมูลและรหัสผ่าน User: ' . $target_user['username']);
+    } else {
+        $sql = "UPDATE users SET fullname=?, email=?, department_id=?, role=?, is_active=? WHERE id=?";
+        $pdo->prepare($sql)->execute([$_POST['fullname'], $_POST['email'], $dept, $_POST['role'], $active, $id]);
+        
+        // ✅ Log (แก้ไขปกติ)
+        logActivity($pdo, $current_user_id, 'UPDATE', 'แก้ไขข้อมูล User: ' . $target_user['username']);
+    }
+    
+    header("Location: index.php?msg=updated");
+}
+
+// --- RESET PASSWORD: รีเซ็ตรหัส ---
+elseif ($action == 'reset_pass') {
+    $id = $_GET['id'];
+    
+    // ดึงชื่อ User มาเพื่อบันทึก Log
+    $stmt = $pdo->prepare("SELECT username FROM users WHERE id = ?");
+    $stmt->execute([$id]);
+    $target_user = $stmt->fetch();
+
+    $defaultPass = password_hash("1234", PASSWORD_DEFAULT); // รหัสเริ่มต้น
+
+    // ✅ ใช้ column 'password_hash'
+    $pdo->prepare("UPDATE users SET password_hash = ? WHERE id = ?")->execute([$defaultPass, $id]);
+    
+    // ✅ บันทึก Log
+    logActivity($pdo, $current_user_id, 'UPDATE', 'รีเซ็ตรหัสผ่าน (Reset Pass) ของ User: ' . $target_user['username']);
+
+    header("Location: index.php?msg=reset");
+}
+
+else {
+    header("Location: index.php");
+}

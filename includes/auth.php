@@ -1,20 +1,25 @@
 <?php
-// includes/auth.php
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// เช็คว่ามี User ID ใน Session หรือไม่
+// ถ้าไม่มี Session User ให้เด้งไปหน้า Login
 if (!isset($_SESSION['user_id'])) {
-    // ถ้าไม่มี ให้เด้งไปหน้า Login
-    header("Location: /it_support/login.php");
+    // ปรับ Path ให้ถอยกลับไปหา login.php ได้ถูกต้อง
+    // คำนวณความลึกของโฟลเดอร์
+    $path = $_SERVER['PHP_SELF'];
+    $depth = substr_count($path, '/') - 2; // -2 เพราะเราอยู่ใน folder ย่อย (it_support/modules/xxx)
+    $prefix = str_repeat('../', $depth > 0 ? $depth : 0);
+    
+    header("Location: " . $prefix . "login.php");
     exit();
 }
 
-// ฟังก์ชันเช็คสิทธิ์ (Helper Function)
+// ฟังก์ชันเช็ค Admin
 function requireAdmin() {
     if ($_SESSION['role'] !== 'admin') {
-        echo "<h1>Access Denied</h1><p>คุณไม่มีสิทธิ์เข้าถึงหน้านี้</p><a href='/it_support/index.php'>กลับหน้าหลัก</a>";
+        echo "<h3>⛔ Access Denied</h3><p>คุณไม่มีสิทธิ์เข้าถึงหน้านี้ (Admin Only)</p>";
+        echo "<a href='../../index.php'>กลับหน้าหลัก</a>";
         exit();
     }
 }

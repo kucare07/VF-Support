@@ -1,0 +1,8 @@
+# ห้ามรัน PHP ในโฟลเดอร์นี้ (ป้องกัน Web Shell)
+<FilesMatch "\.(php|php5|phtml)$">
+    Order Deny,Allow
+    Deny from all
+</FilesMatch>
+
+# ปิดการแสดงรายชื่อไฟล์ (Directory Listing)
+Options -Indexes
