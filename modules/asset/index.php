@@ -2,13 +2,13 @@
 require_once '../../includes/auth.php';
 require_once '../../config/db_connect.php';
 
-// --- Prepare Data ---
+// --- Prepare Dropdown Data ---
 $types = $pdo->query("SELECT * FROM asset_types ORDER BY name ASC")->fetchAll();
 $locations = $pdo->query("SELECT * FROM locations ORDER BY name ASC")->fetchAll();
 $users = $pdo->query("SELECT * FROM users WHERE is_active = 1 ORDER BY fullname ASC")->fetchAll();
 $suppliers = $pdo->query("SELECT * FROM suppliers ORDER BY name ASC")->fetchAll();
 
-// --- Filter Logic ---
+// --- Filter Logic (Secure Way) ---
 $search   = isset($_GET['q']) ? trim($_GET['q']) : '';
 $type_id  = isset($_GET['type']) ? $_GET['type'] : '';
 $loc_id   = isset($_GET['location']) ? $_GET['location'] : '';
@@ -17,12 +17,14 @@ $status   = isset($_GET['status']) ? $_GET['status'] : '';
 $where = ["1=1"];
 $params = [];
 
+// Filter: Search
 if ($search) {
     $where[] = "(a.asset_code LIKE ? OR a.name LIKE ? OR a.serial_number LIKE ?)";
     $params[] = "%$search%";
     $params[] = "%$search%";
     $params[] = "%$search%";
 }
+// Filter: Dropdowns
 if ($type_id) {
     $where[] = "a.asset_type_id = ?";
     $params[] = $type_id;
@@ -38,7 +40,7 @@ if ($status) {
 
 $sql_cond = implode(" AND ", $where);
 
-// JOIN suppliers
+// Query Data (Prepared Statement)
 $sql = "SELECT a.*, t.name as type_name, l.name as location_name, u.fullname as owner_name, s.name as supplier_name 
         FROM assets a 
         LEFT JOIN asset_types t ON a.asset_type_id = t.id
@@ -64,11 +66,14 @@ $assets = $stmt->fetchAll();
     </nav>
 
     <div class="main-content-scroll">
-        <div class="container-fluid p-3"> <?php if (isset($_GET['msg'])): ?>
+        <div class="container-fluid p-2"> <?php if (isset($_GET['msg'])): ?>
                 <script>
+                    let msg = "<?= $_GET['msg'] ?>";
+                    let title = "สำเร็จ!";
+                    if(msg === 'imported') title = "นำเข้าข้อมูลเรียบร้อย";
                     Swal.fire({
                         icon: 'success',
-                        title: 'สำเร็จ!',
+                        title: title,
                         timer: 1500,
                         showConfirmButton: false
                     });
@@ -79,9 +84,17 @@ $assets = $stmt->fetchAll();
                 <div class="card-header bg-white py-3">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h6 class="fw-bold text-primary m-0"><i class="bi bi-pc-display me-2"></i>รายการครุภัณฑ์ทั้งหมด</h6>
-                        <button class="btn btn-sm btn-primary" onclick="openAddModal()">
-                            <i class="bi bi-plus-lg me-1"></i> เพิ่มรายการใหม่
-                        </button>
+                        <div>
+                            <a href="export_assets.php" target="_blank" class="btn btn-sm btn-success me-1 shadow-sm">
+                                <i class="bi bi-file-earmark-excel"></i> Export
+                            </a>
+                            <a href="import_assets.php" class="btn btn-sm btn-outline-success me-1 shadow-sm">
+                                <i class="bi bi-cloud-upload"></i> Import
+                            </a>
+                            <button class="btn btn-sm btn-primary shadow-sm" onclick="openAddModal()">
+                                <i class="bi bi-plus-lg me-1"></i> เพิ่มรายการใหม่
+                            </button>
+                        </div>
                     </div>
 
                     <form method="GET" action="index.php">
@@ -143,6 +156,7 @@ $assets = $stmt->fetchAll();
                             <tbody>
                                 <?php if (count($assets) > 0): ?>
                                     <?php foreach ($assets as $item):
+                                        // Encode Data for JS
                                         $jsonData = htmlspecialchars(json_encode($item), ENT_QUOTES, 'UTF-8');
                                     ?>
                                         <tr>
@@ -175,13 +189,12 @@ $assets = $stmt->fetchAll();
                                                 ?><span class="badge bg-<?= $st_color ?>"><?= $st_text ?></span></td>
                                             <td><?= $item['owner_name'] ?: '-' ?></td>
                                             <td class="text-end pe-3">
-                                                <a href="print_qr.php?id=<?= $item['id'] ?>" target="_blank" class="btn btn-sm btn-light border py-0 me-1 shadow-sm"><i class="bi bi-qr-code"></i></a>
+                                                <a href="print_qr.php?id=<?= $item['id'] ?>" target="_blank" class="btn btn-sm btn-light border py-0 me-1 shadow-sm" title="พิมพ์ QR Code"><i class="bi bi-qr-code"></i></a>
 
                                                 <button class="btn btn-sm btn-light border text-info py-0 me-1 shadow-sm" onclick="openViewModal('<?= $jsonData ?>')"><i class="bi bi-eye"></i></button>
-
                                                 <button class="btn btn-sm btn-light border text-warning py-0 me-1 shadow-sm" onclick="openEditModal('<?= $jsonData ?>')"><i class="bi bi-pencil"></i></button>
-
-                                                <button class="btn btn-sm btn-light border text-danger py-0 shadow-sm"
+                                                
+                                                <button class="btn btn-sm btn-light border text-danger py-0 shadow-sm" 
                                                     onclick="confirmDelete('process.php?action=delete&id=<?= $item['id'] ?>', 'ต้องการลบ <?= $item['asset_code'] ?> ใช่หรือไม่?')">
                                                     <i class="bi bi-trash"></i>
                                                 </button>
@@ -204,20 +217,23 @@ $assets = $stmt->fetchAll();
 
 <div class="modal fade" id="formModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
-        <div class="modal-content">
+        <div class="modal-content rounded-4 border-0 shadow">
             <form action="process.php" method="POST" enctype="multipart/form-data">
                 <input type="hidden" name="action" id="formAction">
                 <input type="hidden" name="id" id="assetId">
-                <div class="modal-header bg-primary text-white py-2">
+                
+                <div class="modal-header bg-primary text-white py-2 rounded-top-4" id="formHeader">
                     <h6 class="modal-title fw-bold" id="formTitle">จัดการครุภัณฑ์</h6>
                     <button type="button" class="btn-close btn-close-white btn-sm" data-bs-dismiss="modal"></button>
                 </div>
+                
                 <div class="modal-body">
                     <ul class="nav nav-tabs mb-3" id="myTab" role="tablist">
                         <li class="nav-item"><button class="nav-link active py-1 small" id="general-tab" data-bs-toggle="tab" data-bs-target="#general" type="button">ข้อมูลทั่วไป</button></li>
                         <li class="nav-item"><button class="nav-link py-1 small" id="spec-tab" data-bs-toggle="tab" data-bs-target="#spec" type="button">สเปก</button></li>
                         <li class="nav-item"><button class="nav-link py-1 small" id="status-tab" data-bs-toggle="tab" data-bs-target="#status" type="button">สถานะ/การจัดซื้อ</button></li>
                     </ul>
+                    
                     <div class="tab-content" id="myTabContent">
                         <div class="tab-pane fade show active" id="general">
                             <div class="row g-2">
@@ -236,6 +252,7 @@ $assets = $stmt->fetchAll();
                                 </div>
                             </div>
                         </div>
+                        
                         <div class="tab-pane fade" id="spec">
                             <div class="row g-2">
                                 <div class="col-md-12"><label class="form-label small fw-bold">CPU</label><input type="text" name="spec_cpu" id="spec_cpu" class="form-control form-control-sm"></div>
@@ -244,6 +261,7 @@ $assets = $stmt->fetchAll();
                                 <div class="col-md-12"><label class="form-label small fw-bold">OS / License</label><input type="text" name="os_license" id="os_license" class="form-control form-control-sm"></div>
                             </div>
                         </div>
+                        
                         <div class="tab-pane fade" id="status">
                             <div class="row g-2">
                                 <div class="col-md-6"><label class="form-label small fw-bold">สถานะ</label><select name="status" id="status_val" class="form-select form-select-sm">
@@ -268,9 +286,9 @@ $assets = $stmt->fetchAll();
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer py-1 border-top-0">
-                    <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal">ยกเลิก</button>
-                    <button type="submit" class="btn btn-sm btn-primary" id="btnSave">บันทึก</button>
+                <div class="modal-footer py-2 border-top-0 bg-light rounded-bottom-4">
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="submit" class="btn btn-sm btn-primary px-3">บันทึก</button>
                 </div>
             </form>
         </div>
@@ -279,10 +297,10 @@ $assets = $stmt->fetchAll();
 
 <div class="modal fade" id="viewModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header bg-light py-2">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header bg-info text-white py-2 rounded-top-4">
                 <h6 class="modal-title fw-bold" id="viewTitle">รายละเอียด</h6>
-                <button type="button" class="btn-close btn-sm" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close btn-close-white btn-sm" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <ul class="nav nav-tabs mb-3" id="viewTab" role="tablist">
@@ -297,38 +315,14 @@ $assets = $stmt->fetchAll();
                         <div class="row">
                             <div class="col-md-8">
                                 <table class="table table-bordered table-sm mb-0" style="font-size: 0.85rem;">
-                                    <tr>
-                                        <td class="bg-light fw-bold w-25 ps-3">รหัส</td>
-                                        <td class="ps-3" id="v_code"></td>
-                                    </tr>
-                                    <tr>
-                                        <td class="bg-light fw-bold ps-3">ชื่อ</td>
-                                        <td class="ps-3" id="v_name"></td>
-                                    </tr>
-                                    <tr>
-                                        <td class="bg-light fw-bold ps-3">สเปก</td>
-                                        <td class="ps-3" id="v_spec"></td>
-                                    </tr>
-                                    <tr>
-                                        <td class="bg-light fw-bold ps-3">ผู้ใช้</td>
-                                        <td class="ps-3" id="v_user"></td>
-                                    </tr>
-                                    <tr>
-                                        <td class="bg-light fw-bold ps-3">สถานที่</td>
-                                        <td class="ps-3" id="v_location"></td>
-                                    </tr>
-                                    <tr>
-                                        <td class="bg-light fw-bold ps-3">ผู้ขาย</td>
-                                        <td class="ps-3" id="v_supplier"></td>
-                                    </tr>
-                                    <tr>
-                                        <td class="bg-light fw-bold ps-3">ประกันหมด</td>
-                                        <td class="ps-3" id="v_warranty"></td>
-                                    </tr>
-                                    <tr>
-                                        <td class="bg-light fw-bold ps-3">สถานะ</td>
-                                        <td class="ps-3" id="v_status"></td>
-                                    </tr>
+                                    <tr><td class="bg-light fw-bold w-25 ps-3">รหัส</td><td class="ps-3" id="v_code"></td></tr>
+                                    <tr><td class="bg-light fw-bold ps-3">ชื่อ</td><td class="ps-3" id="v_name"></td></tr>
+                                    <tr><td class="bg-light fw-bold ps-3">สเปก</td><td class="ps-3" id="v_spec"></td></tr>
+                                    <tr><td class="bg-light fw-bold ps-3">ผู้ใช้</td><td class="ps-3" id="v_user"></td></tr>
+                                    <tr><td class="bg-light fw-bold ps-3">สถานที่</td><td class="ps-3" id="v_location"></td></tr>
+                                    <tr><td class="bg-light fw-bold ps-3">ผู้ขาย</td><td class="ps-3" id="v_supplier"></td></tr>
+                                    <tr><td class="bg-light fw-bold ps-3">ประกันหมด</td><td class="ps-3" id="v_warranty"></td></tr>
+                                    <tr><td class="bg-light fw-bold ps-3">สถานะ</td><td class="ps-3" id="v_status"></td></tr>
                                 </table>
                             </div>
                             <div class="col-md-4 text-center">
@@ -339,61 +333,36 @@ $assets = $stmt->fetchAll();
                             </div>
                         </div>
                     </div>
+                    
                     <div class="tab-pane fade" id="v_history">
                         <div class="table-responsive">
                             <table class="table table-hover table-sm small">
                                 <thead class="table-light">
-                                    <tr>
-                                        <th>วันที่</th>
-                                        <th>การกระทำ</th>
-                                        <th>รายละเอียด</th>
-                                        <th>โดย</th>
-                                    </tr>
+                                    <tr><th>วันที่</th><th>การกระทำ</th><th>รายละเอียด</th><th>โดย</th></tr>
                                 </thead>
-                                <tbody id="history_body">
-                                    <tr>
-                                        <td colspan="4" class="text-center">Loading...</td>
-                                    </tr>
-                                </tbody>
+                                <tbody id="history_body"><tr><td colspan="4" class="text-center">Loading...</td></tr></tbody>
                             </table>
                         </div>
                     </div>
+                    
                     <div class="tab-pane fade" id="v_tickets">
                         <div class="table-responsive">
                             <table class="table table-hover table-sm small">
                                 <thead class="table-light">
-                                    <tr>
-                                        <th>ID</th>
-                                        <th>วันที่</th>
-                                        <th>อาการ</th>
-                                        <th>ผู้แจ้ง</th>
-                                        <th>สถานะ</th>
-                                    </tr>
+                                    <tr><th>ID</th><th>วันที่</th><th>อาการ</th><th>ผู้แจ้ง</th><th>สถานะ</th></tr>
                                 </thead>
-                                <tbody id="ticket_body">
-                                    <tr>
-                                        <td colspan="5" class="text-center">Loading...</td>
-                                    </tr>
-                                </tbody>
+                                <tbody id="ticket_body"><tr><td colspan="5" class="text-center">Loading...</td></tr></tbody>
                             </table>
                         </div>
                     </div>
+                    
                     <div class="tab-pane fade" id="v_software">
                         <div class="table-responsive">
                             <table class="table table-hover table-sm small">
                                 <thead class="table-light">
-                                    <tr>
-                                        <th>ซอฟต์แวร์</th>
-                                        <th>ผู้ผลิต</th>
-                                        <th>เวอร์ชัน</th>
-                                        <th>License Key</th>
-                                    </tr>
+                                    <tr><th>ซอฟต์แวร์</th><th>ผู้ผลิต</th><th>เวอร์ชัน</th><th>License Key</th></tr>
                                 </thead>
-                                <tbody id="software_body">
-                                    <tr>
-                                        <td colspan="4" class="text-center">Loading...</td>
-                                    </tr>
-                                </tbody>
+                                <tbody id="software_body"><tr><td colspan="4" class="text-center">Loading...</td></tr></tbody>
                             </table>
                         </div>
                     </div>
@@ -415,13 +384,13 @@ $assets = $stmt->fetchAll();
     function openAddModal() {
         document.getElementById('formAction').value = 'add';
         document.getElementById('formTitle').innerText = 'เพิ่มรายการใหม่';
+        document.getElementById('formHeader').className = 'modal-header bg-primary text-white py-2 rounded-top-4';
+        
         document.getElementById('assetId').value = '';
         document.getElementById('preview_img').innerHTML = '';
         document.forms[0].reset();
 
-        // Reset Select2
-        $('#current_user_id').val(null).trigger('change');
-
+        $('#current_user_id').val(null).trigger('change'); // Reset Select2
         formModal.show();
     }
 
@@ -429,24 +398,28 @@ $assets = $stmt->fetchAll();
         const data = JSON.parse(jsonData);
         document.getElementById('formAction').value = 'edit';
         document.getElementById('formTitle').innerText = 'แก้ไขรายการ';
+        document.getElementById('formHeader').className = 'modal-header bg-warning text-dark py-2 rounded-top-4';
+        
         document.getElementById('assetId').value = data.id;
+        
+        // Map Fields
         for (const [key, value] of Object.entries(data)) {
             let input = document.getElementById(key);
             if (input) input.value = value || '';
         }
+        
+        // Manual Map for specifics
         if (data.asset_type_id) document.getElementById('asset_type_id').value = data.asset_type_id;
         if (data.status) document.getElementById('status_val').value = data.status;
         if (data.current_user_id) {
-            $('#current_user_id').val(data.current_user_id).trigger('change'); // Update Select2
+            $('#current_user_id').val(data.current_user_id).trigger('change');
         } else {
             $('#current_user_id').val(null).trigger('change');
         }
         if (data.location_id) document.getElementById('location_id').value = data.location_id;
         if (data.supplier_id) document.getElementById('supplier_id').value = data.supplier_id;
 
-        // Show current image name
         document.getElementById('preview_img').innerHTML = data.image ? 'ไฟล์ปัจจุบัน: ' + data.image : 'ยังไม่มีรูปภาพ';
-
         formModal.show();
     }
 
@@ -462,7 +435,6 @@ $assets = $stmt->fetchAll();
         document.getElementById('v_warranty').innerText = data.warranty_expire || '-';
         document.getElementById('v_status').innerText = data.status.toUpperCase();
 
-        // Show Image
         const img = document.getElementById('v_image');
         const noImg = document.getElementById('v_no_image');
         if (data.image) {
@@ -474,7 +446,7 @@ $assets = $stmt->fetchAll();
             noImg.style.display = 'block';
         }
 
-        // Load AJAX Tabs
+        // AJAX Loaders
         loadHistory(data.id);
         loadTickets(data.asset_code);
         loadSoftware(data.id);
@@ -482,24 +454,7 @@ $assets = $stmt->fetchAll();
         viewModal.show();
     }
 
-    // --- AJAX Loaders (Assumes backend scripts exist) ---
-    function loadHistory(id) {
-        fetch('get_history.php?id=' + id).then(r => r.text()).then(h => {
-            document.getElementById('history_body').innerHTML = h;
-        });
-    }
-
-    function loadTickets(code) {
-        fetch('get_tickets.php?code=' + encodeURIComponent(code)).then(r => r.text()).then(h => {
-            document.getElementById('ticket_body').innerHTML = h;
-        });
-    }
-
-    function loadSoftware(id) {
-        fetch('get_software.php?id=' + id).then(r => r.text()).then(h => {
-            document.getElementById('software_body').innerHTML = h;
-        });
-    }
-
-    // ✅ Removed 'menu-toggle' event listener
+    function loadHistory(id) { fetch('get_history.php?id=' + id).then(r => r.text()).then(h => { document.getElementById('history_body').innerHTML = h; }); }
+    function loadTickets(code) { fetch('get_tickets.php?code=' + encodeURIComponent(code)).then(r => r.text()).then(h => { document.getElementById('ticket_body').innerHTML = h; }); }
+    function loadSoftware(id) { fetch('get_software.php?id=' + id).then(r => r.text()).then(h => { document.getElementById('software_body').innerHTML = h; }); }
 </script>

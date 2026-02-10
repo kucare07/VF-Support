@@ -9,6 +9,12 @@ if (isset($_GET['action']) && $_GET['action'] == 'delete') {
     exit();
 }
 
+// เพิ่มการเช็ค CSRF
+if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    if (!isset($_POST['csrf_token']) || !validateCSRFToken($_POST['csrf_token'])) {
+        die("Security Error: Invalid CSRF Token");
+    }
+}
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $action = $_POST['action'];
 

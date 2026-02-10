@@ -70,7 +70,7 @@
 
         /* --- Content Area --- */
         .main-content-scroll {
-            padding: 1.5rem; /* ระยะห่างขอบมาตรฐาน */
+            padding: 0 !important;
             flex: 1;
             overflow-x: hidden; /* ซ่อน Scrollbar แนวนอนของทั้งหน้า */
         }
@@ -133,7 +133,7 @@
                 margin-left: var(--sidebar-width); /* เว้นที่ให้ Sidebar */
             }
             .main-navbar { padding: 0 2rem; }
-            .main-content-scroll { padding: 2rem; }
+            .main-content-scroll { padding: 0 !important; }
         }
 
         /* กรณีหน้าจอ Mobile / Tablet (เล็กกว่า 768px) */
@@ -148,7 +148,7 @@
             }
             
             .main-content-scroll {
-                padding: 1rem; /* ลดระยะขอบในมือถือ */
+               padding: 0 !important; /* ลดระยะขอบในมือถือ */
             }
 
             /* ปรับขนาดตัวหนังสือในมือถือให้พอดี */

@@ -92,7 +92,8 @@ body {
     padding: 0 1rem; 
     flex-shrink: 0; 
 }
-.main-content-scroll { flex-grow: 1; overflow-y: auto; padding: 1rem; /* ลด Padding ขอบจอ */ }
+/* ค้นหาบรรทัดนี้ */
+.main-content-scroll { flex-grow: 1; overflow-y: auto; padding: 0 !important; /* ✅ แก้เป็น 0 */ }
 
 /* --- COMPACT UI ELEMENTS --- */
 /* Card (กล่อง) */

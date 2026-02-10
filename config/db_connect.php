@@ -1,6 +1,6 @@
 <?php
 // db_connect.php
-$host = 'localhost';
+$host = '127.0.0.1';
 $db   = 'it_support_db';
 $user = 'root'; // เปลี่ยนเป็น username ของคุณ
 $pass = '';     // เปลี่ยนเป็น password ของคุณ
