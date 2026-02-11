@@ -52,6 +52,20 @@ if ($_POST['action'] == 'create') {
         ]);
         
         $new_id = $pdo->lastInsertId();
+        // --- ส่วนส่งไลน์แจ้งเตือนเจ้าหน้าที่ ---
+        // 1. ดึง Token จากตาราง settings
+        $line_token = getSystemSetting('line_notify_token', $pdo); // ตรวจสอบชื่อใน DB ว่าใช้ชื่ออะไร แน่ใจว่าเป็น line_notify_token หรือ line_token
+
+        if ($line_token) {
+            $notify_msg = "\n🔥 มีรายการแจ้งซ่อมใหม่ (Guest)";
+            $notify_msg .= "\nเลขที่: #" . str_pad($new_id, 5, '0', STR_PAD_LEFT);
+            $notify_msg .= "\nผู้แจ้ง: " . $guest_name;
+            $notify_msg .= "\nแผนก/เบอร์: " . $guest_dept . " (" . $guest_phone . ")";
+            $notify_msg .= "\nอาการ: " . $description_text;
+            
+            // ส่งข้อความ
+            sendLineNotify($notify_msg, $line_token);
+        }
 
         echo json_encode(['status' => 'success', 'ticket_id' => str_pad($new_id, 5, '0', STR_PAD_LEFT)]);
 

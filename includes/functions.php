@@ -217,3 +217,27 @@ if (!function_exists('validateCSRFToken')) {
         return isset($_SESSION['csrf_token']) && hash_equals($_SESSION['csrf_token'], $token);
     }
 }
+
+
+// ฟังก์ชันส่ง Line Notify (แจ้งเตือนเข้ากลุ่มเจ้าหน้าที่)
+function sendLineNotify($message, $token) {
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, "https://notify-api.line.me/api/notify");
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+    curl_setopt($ch, CURLOPT_POST, 1);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, "message=" . $message);
+    $headers = array('Content-type: application/x-www-form-urlencoded', 'Authorization: Bearer ' . $token);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+    $result = curl_exec($ch);
+    curl_close($ch);
+    return $result;
+}
+
+// ฟังก์ชันดึง Token จาก Database (ตาราง settings)
+function getSystemSetting($key, $pdo) {
+    $stmt = $pdo->prepare("SELECT setting_value FROM settings WHERE setting_name = ?");
+    $stmt->execute([$key]);
+    return $stmt->fetchColumn();
+}

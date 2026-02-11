@@ -4,24 +4,38 @@ requireAdmin(); // เฉพาะ Admin
 require_once '../../config/db_connect.php';
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    // รับค่าจาก Form เป็น Array และวนลูปอัปเดต
-    $settings = $_POST['settings']; // รับ array ชื่อ settings[key]
+    // รับค่า settings จากฟอร์ม
+    $settings = $_POST['settings'] ?? [];
 
     try {
         $pdo->beginTransaction();
 
+        // เตรียม Query ครั้งเดียว (อยู่นอก Loop) เพื่อความเร็ว
+        // ใช้ ? แทนชื่อตัวแปร เพื่อแก้ปัญหา HY093
+        $sql = "INSERT INTO system_settings (setting_key, setting_value) 
+                VALUES (?, ?) 
+                ON DUPLICATE KEY UPDATE setting_value = ?";
+        $stmt = $pdo->prepare($sql);
+
         foreach ($settings as $key => $value) {
-            // อัปเดตทีละค่า
-            $stmt = $pdo->prepare("UPDATE system_settings SET setting_value = ? WHERE setting_key = ?");
-            $stmt->execute([trim($value), $key]);
+            $val = trim($value);
+            // ส่งค่า 3 ตัว: 1.Key, 2.Value(สำหรับ Insert), 3.Value(สำหรับ Update)
+            $stmt->execute([$key, $val, $val]);
         }
 
         $pdo->commit();
-        header("Location: index.php?msg=updated");
+        header("Location: index.php?msg=saved");
+        exit();
 
     } catch (Exception $e) {
-        $pdo->rollBack();
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
         header("Location: index.php?error=" . urlencode($e->getMessage()));
+        exit();
     }
+} else {
+    header("Location: index.php");
+    exit();
 }
 ?>
