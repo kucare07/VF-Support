@@ -3,7 +3,8 @@ require_once '../../includes/auth.php';
 require_once '../../config/db_connect.php';
 require_once '../../includes/functions.php';
 
-// SQL: Fetch data (Includes SLA Due Date)
+// --- Filter Logic (Secure) ---
+// ส่วนนี้ปรับให้ใช้ Prepared Statement เพื่อป้องกัน SQL Injection
 $sql = "SELECT t.*, 
         u.fullname as requester_name, u.email as req_email, u.phone as req_phone,
         d.name as dept_name,
@@ -19,7 +20,10 @@ $sql = "SELECT t.*,
         LEFT JOIN locations l ON a.location_id = l.id
         ORDER BY t.priority = 'critical' DESC, t.created_at DESC";
 
-$tickets = $pdo->query($sql)->fetchAll();
+// (ถ้าอนาคตมี Search ให้ใส่เงื่อนไข WHERE ... LIKE ? ตรงนี้)
+$stmt = $pdo->prepare($sql);
+$stmt->execute();
+$tickets = $stmt->fetchAll();
 
 $categories = $pdo->query("SELECT * FROM categories")->fetchAll();
 $technicians = $pdo->query("SELECT * FROM users WHERE role IN ('technician', 'admin')")->fetchAll();
@@ -37,21 +41,14 @@ $users_all = $pdo->query("SELECT * FROM users WHERE is_active = 1 ORDER BY fulln
     </nav>
 
     <div class="main-content-scroll">
-        <div class="container-fluid p-3"> <?php if (isset($_GET['msg'])): ?>
-                <script>
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'สำเร็จ!',
-                        timer: 1500,
-                        showConfirmButton: false
-                    });
-                </script>
+        <div class="container-fluid p-2"> <?php if (isset($_GET['msg'])): ?>
+                <script>Swal.fire({icon: 'success', title: 'สำเร็จ!', timer: 1500, showConfirmButton: false});</script>
             <?php endif; ?>
 
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
                     <h6 class="fw-bold text-primary m-0"><i class="bi bi-list-columns-reverse me-2"></i>รายการแจ้งซ่อม</h6>
-                    <button class="btn btn-sm btn-primary" onclick="openAddModal()">
+                    <button class="btn btn-sm btn-primary shadow-sm" onclick="openAddModal()">
                         <i class="bi bi-plus-circle me-1"></i> แจ้งปัญหา/งานซ่อม
                     </button>
                 </div>
@@ -62,25 +59,23 @@ $users_all = $pdo->query("SELECT * FROM users WHERE is_active = 1 ORDER BY fulln
                             <thead class="table-light">
                                 <tr>
                                     <th class="ps-3">รหัส (ID)</th>
-                                    <th>ประเภท (Type)</th>
+                                    <th>ประเภท</th>
                                     <th>ปัญหา/อาการ</th>
                                     <th>ผู้แจ้ง</th>
-                                    <th>สถานะ (Status)</th>
+                                    <th>สถานะ</th>
                                     <th>กำหนดเสร็จ (SLA)</th>
-                                    <th class="text-end pe-3">จัดการ (Action)</th>
+                                    <th class="text-end pe-3">จัดการ</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php foreach ($tickets as $row):
                                     $json = htmlspecialchars(json_encode($row), ENT_QUOTES, 'UTF-8');
-
                                     // SLA Calculation
                                     $is_overdue = false;
                                     $sla_text = '-';
                                     if ($row['sla_due_date']) {
                                         $sla_time = strtotime($row['sla_due_date']);
                                         $sla_text = date('d/m H:i', $sla_time);
-                                        // Check if overdue and not resolved/closed
                                         if (!in_array($row['status'], ['resolved', 'closed']) && time() > $sla_time) {
                                             $is_overdue = true;
                                         }
@@ -90,9 +85,9 @@ $users_all = $pdo->query("SELECT * FROM users WHERE is_active = 1 ORDER BY fulln
                                         <td class="ps-3 fw-bold">#<?= str_pad($row['id'], 5, '0', STR_PAD_LEFT) ?></td>
                                         <td>
                                             <?php if (isset($row['type']) && $row['type'] == 'request'): ?>
-                                                <span class="badge bg-info text-dark" title="Request">Req</span>
+                                                <span class="badge bg-info text-dark">Req</span>
                                             <?php else: ?>
-                                                <span class="badge bg-danger" title="Incident">Inc</span>
+                                                <span class="badge bg-danger">Inc</span>
                                             <?php endif; ?>
                                         </td>
                                         <td>
@@ -100,11 +95,7 @@ $users_all = $pdo->query("SELECT * FROM users WHERE is_active = 1 ORDER BY fulln
                                                 <?= $row['description'] ?>
                                             </div>
                                             <small class="text-muted"><i class="bi bi-tag"></i> <?= $row['cat_name'] ?>
-                                                <span class="badge bg-<?= match ($row['priority']) {
-                                                                            'critical' => 'danger',
-                                                                            'high' => 'warning',
-                                                                            default => 'light text-dark border'
-                                                                        } ?> ms-1"><?= ucfirst($row['priority']) ?></span>
+                                                <span class="badge bg-<?= match ($row['priority']) { 'critical' => 'danger', 'high' => 'warning', default => 'light text-dark border' } ?> ms-1"><?= ucfirst($row['priority']) ?></span>
                                             </small>
                                         </td>
                                         <td>
@@ -122,9 +113,14 @@ $users_all = $pdo->query("SELECT * FROM users WHERE is_active = 1 ORDER BY fulln
                                             <?php endif; ?>
                                         </td>
                                         <td class="text-end pe-3">
-                                            <button class="btn btn-sm btn-light border py-0 me-1" onclick="openView('<?= $json ?>')" title="ดูรายละเอียด"><i class="bi bi-eye"></i></button>
+                                            <button class="btn btn-sm btn-light border text-info py-0 me-1 shadow-sm" onclick="openView('<?= $json ?>')" title="ดูรายละเอียด"><i class="bi bi-eye"></i></button>
+                                            
                                             <?php if ($_SESSION['role'] != 'user'): ?>
-                                                <button class="btn btn-sm btn-light border text-warning py-0" onclick="openEdit('<?= $json ?>')" title="แก้ไขสถานะ"><i class="bi bi-pencil"></i></button>
+                                                <button class="btn btn-sm btn-light border text-warning py-0 me-1 shadow-sm" onclick="openEdit('<?= $json ?>')" title="แก้ไขสถานะ"><i class="bi bi-pencil"></i></button>
+                                                <button class="btn btn-sm btn-light border text-danger py-0 shadow-sm" 
+                                                    onclick="confirmDelete('process.php?action=delete&id=<?= $row['id'] ?>', 'ยืนยันลบ Ticket #<?= str_pad($row['id'], 5, '0', STR_PAD_LEFT) ?>?')">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
                                             <?php endif; ?>
                                         </td>
                                     </tr>
@@ -140,12 +136,13 @@ $users_all = $pdo->query("SELECT * FROM users WHERE is_active = 1 ORDER BY fulln
 
 <div class="modal fade" id="addModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
-        <div class="modal-content">
+        <div class="modal-content rounded-4 border-0 shadow">
             <form action="process.php" method="POST" enctype="multipart/form-data">
                 <input type="hidden" name="action" value="add">
+                <input type="hidden" name="csrf_token" value="<?= generateCSRFToken() ?>">
 
-                <div class="modal-header bg-primary text-white py-2">
-                    <h6 class="modal-title fw-bold">แจ้งปัญหา / งานซ่อม</h6>
+                <div class="modal-header bg-primary text-white py-2 rounded-top-4">
+                    <h6 class="modal-title fw-bold"><i class="bi bi-plus-circle me-2"></i>แจ้งปัญหา / งานซ่อม</h6>
                     <button type="button" class="btn-close btn-close-white btn-sm" data-bs-dismiss="modal"></button>
                 </div>
 
@@ -210,7 +207,6 @@ $users_all = $pdo->query("SELECT * FROM users WHERE is_active = 1 ORDER BY fulln
                             <label class="form-label small fw-bold mb-1">แนบรูปภาพ</label>
                             <input type="file" name="attachment" class="form-control form-control-sm">
                         </div>
-
                         <div class="col-12 mt-2">
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" name="notify_line" id="chkLine" checked>
@@ -219,8 +215,8 @@ $users_all = $pdo->query("SELECT * FROM users WHERE is_active = 1 ORDER BY fulln
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer py-1 border-top-0">
-                    <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal">ยกเลิก</button>
+                <div class="modal-footer py-2 border-top-0 bg-light rounded-bottom-4">
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
                     <button type="submit" class="btn btn-sm btn-primary px-3">บันทึก</button>
                 </div>
             </form>
@@ -230,8 +226,8 @@ $users_all = $pdo->query("SELECT * FROM users WHERE is_active = 1 ORDER BY fulln
 
 <div class="modal fade" id="viewModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header bg-primary text-white py-2">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header bg-info text-white py-2 rounded-top-4">
                 <h6 class="modal-title fw-bold">รายละเอียด #<span id="v_id_text"></span></h6>
                 <button type="button" class="btn-close btn-close-white btn-sm" data-bs-dismiss="modal"></button>
             </div>
@@ -276,14 +272,15 @@ $users_all = $pdo->query("SELECT * FROM users WHERE is_active = 1 ORDER BY fulln
                         </div>
 
                         <hr class="my-2">
+
                         <h6 class="fw-bold text-primary small mb-2">ประวัติการสนทนา</h6>
-                        <div id="comment_history" class="border rounded p-2 mb-2 bg-white" style="height: 250px; overflow-y: auto; background-color: #f8f9fa;">
-                            <div class="text-center text-muted small mt-5">Loading...</div>
-                        </div>
+                        <div id="comment_history" class="border rounded p-2 mb-2 bg-white" style="height: 200px; overflow-y: auto;">
+                            </div>
+
                         <h6 class="fw-bold text-primary small mb-2">ตอบกลับ / บันทึก</h6>
                         <form action="process.php" method="POST">
                             <input type="hidden" name="action" value="comment">
-                            <input type="hidden" name="ticket_id" id="c_tid">
+                            <input type="hidden" name="csrf_token" value="<?= generateCSRFToken() ?>"> <input type="hidden" name="ticket_id" id="c_tid">
                             <textarea name="comment" class="form-control form-control-sm mb-2" rows="2" placeholder="พิมพ์ข้อความ..." required></textarea>
                             <button type="submit" class="btn btn-sm btn-outline-primary w-100">ส่งข้อความ</button>
                         </form>
@@ -296,12 +293,13 @@ $users_all = $pdo->query("SELECT * FROM users WHERE is_active = 1 ORDER BY fulln
 
 <div class="modal fade" id="editModal" tabindex="-1">
     <div class="modal-dialog modal-sm">
-        <div class="modal-content">
+        <div class="modal-content rounded-4 border-0 shadow">
             <form action="process.php" method="POST">
                 <input type="hidden" name="action" value="edit">
-                <input type="hidden" name="id" id="e_id">
-                <div class="modal-header bg-warning py-2">
-                    <h6 class="modal-title fw-bold text-dark">อัปเดตงาน</h6>
+                <input type="hidden" name="csrf_token" value="<?= generateCSRFToken() ?>"> <input type="hidden" name="id" id="e_id">
+                
+                <div class="modal-header bg-warning text-dark py-2 rounded-top-4">
+                    <h6 class="modal-title fw-bold"><i class="bi bi-pencil-square me-2"></i>อัปเดตงาน</h6>
                     <button type="button" class="btn-close btn-sm" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
@@ -325,7 +323,7 @@ $users_all = $pdo->query("SELECT * FROM users WHERE is_active = 1 ORDER BY fulln
                         </select>
                     </div>
                 </div>
-                <div class="modal-footer py-1 border-top-0">
+                <div class="modal-footer py-2 border-top-0 bg-light rounded-bottom-4">
                     <button type="submit" class="btn btn-sm btn-warning w-100">บันทึก</button>
                 </div>
             </form>
@@ -364,29 +362,23 @@ $users_all = $pdo->query("SELECT * FROM users WHERE is_active = 1 ORDER BY fulln
         document.getElementById('v_tech').innerText = d.tech_name || 'รอจัดสรร';
         document.getElementById('c_tid').value = d.id;
 
-        const historyBox = document.getElementById('comment_history');
-        historyBox.innerHTML = '<div class="d-flex justify-content-center align-items-center h-100 text-muted"><div class="spinner-border spinner-border-sm me-2"></div> กำลังโหลด...</div>';
-        fetch('get_comments.php?ticket_id=' + d.id)
-            .then(response => response.text())
-            .then(html => {
-                historyBox.innerHTML = html;
-                // สั่งให้ Scrollbar เลื่อนลงไปล่างสุดเสมอ เพื่อดูข้อความล่าสุด
-                setTimeout(() => {
-                    historyBox.scrollTop = historyBox.scrollHeight;
-                }, 100);
-            })
-            .catch(err => {
-                historyBox.innerHTML = '<div class="text-center text-danger small mt-3">เกิดข้อผิดพลาดในการโหลดข้อมูล</div>';
-            });
-        // ✅ จบส่วนที่เพิ่ม
         if (d.attachment) {
             document.getElementById('v_img_container').style.display = 'block';
             document.getElementById('v_img').src = '../../uploads/tickets/' + d.attachment;
         } else {
             document.getElementById('v_img_container').style.display = 'none';
         }
+
+        // ✅ Load Comments
+        const historyBox = document.getElementById('comment_history');
+        historyBox.innerHTML = '<div class="text-center small text-muted mt-3">Loading...</div>';
+        fetch('get_comments.php?ticket_id=' + d.id)
+            .then(r => r.text())
+            .then(html => {
+                historyBox.innerHTML = html;
+                historyBox.scrollTop = historyBox.scrollHeight;
+            });
+
         new bootstrap.Modal(document.getElementById('viewModal')).show();
     }
-
-    // ✅ Removed the problematic 'menu-toggle' event listener
 </script>

@@ -4,7 +4,8 @@
 $base_path = file_exists('config/db_connect.php') ? '' : '../../';
 
 // ฟังก์ชันช่วยเช็ค Active Menu
-function isActive($needle, $haystack) {
+function isActive($needle, $haystack)
+{
     return strpos($haystack, $needle) !== false ? 'active' : '';
 }
 
@@ -15,7 +16,8 @@ $current_page = $_SERVER['PHP_SELF'];
 <style>
     /* --- Sidebar Custom CSS (Compact & Responsive) --- */
     :root {
-        --sidebar-width: 230px; /* ✅ ลดความกว้างลงเหลือ 230px */
+        --sidebar-width: 230px;
+        /* ✅ ลดความกว้างลงเหลือ 230px */
     }
 
     #sidebar-wrapper {
@@ -33,7 +35,8 @@ $current_page = $_SERVER['PHP_SELF'];
         display: flex;
         flex-direction: column;
         box-shadow: 4px 0 10px rgba(0, 0, 0, 0.1);
-        font-size: 0.8rem; /* ✅ ลด Base Font Size ลง (เดิม 0.85) */
+        font-size: 0.8rem;
+        /* ✅ ลด Base Font Size ลง (เดิม 0.85) */
     }
 
     #sidebar-wrapper.active {
@@ -42,8 +45,10 @@ $current_page = $_SERVER['PHP_SELF'];
 
     /* Brand Header */
     .sidebar-brand {
-        padding: 0.8rem 1rem; /* ลด Padding */
-        font-size: 1rem; /* ลดขนาดหัวข้อแบรนด์ */
+        padding: 0.8rem 1rem;
+        /* ลด Padding */
+        font-size: 1rem;
+        /* ลดขนาดหัวข้อแบรนด์ */
         font-weight: bold;
         color: #fff;
         background: rgba(0, 0, 0, 0.2);
@@ -59,17 +64,28 @@ $current_page = $_SERVER['PHP_SELF'];
         overflow-y: auto;
         flex-grow: 1;
     }
-    
+
     /* Scrollbar สวยๆ เล็กๆ */
-    .sidebar-menu::-webkit-scrollbar { width: 4px; }
-    .sidebar-menu::-webkit-scrollbar-thumb { background: #555; border-radius: 2px; }
-    .sidebar-menu::-webkit-scrollbar-track { background: transparent; }
+    .sidebar-menu::-webkit-scrollbar {
+        width: 4px;
+    }
+
+    .sidebar-menu::-webkit-scrollbar-thumb {
+        background: #555;
+        border-radius: 2px;
+    }
+
+    .sidebar-menu::-webkit-scrollbar-track {
+        background: transparent;
+    }
 
     .sidebar-heading {
-        font-size: 0.65rem; /* ✅ ลดขนาดหัวข้อย่อย */
+        font-size: 0.65rem;
+        /* ✅ ลดขนาดหัวข้อย่อย */
         text-transform: uppercase;
         letter-spacing: 1px;
-        color: #6c757d; /* สีจางลงนิดนึงเพื่อไม่แย่งสายตา */
+        color: #6c757d;
+        /* สีจางลงนิดนึงเพื่อไม่แย่งสายตา */
         margin-top: 1rem;
         margin-bottom: 0.2rem;
         padding-left: 0.8rem;
@@ -80,23 +96,28 @@ $current_page = $_SERVER['PHP_SELF'];
     .sidebar-link {
         display: flex;
         align-items: center;
-        padding: 7px 10px; /* ✅ ลด Padding บนล่างให้กระชับ */
+        padding: 7px 10px;
+        /* ✅ ลด Padding บนล่างให้กระชับ */
         color: #ced4da;
         text-decoration: none;
         border-radius: 5px;
         transition: all 0.2s ease;
         margin-bottom: 1px;
-        font-size: 0.82rem; /* ✅ ลดขนาดตัวอักษรเมนู */
-        white-space: nowrap; /* ห้ามตัดบรรทัด */
+        font-size: 0.82rem;
+        /* ✅ ลดขนาดตัวอักษรเมนู */
+        white-space: nowrap;
+        /* ห้ามตัดบรรทัด */
         overflow: hidden;
-        text-overflow: ellipsis; /* ถ้ายาวเกินให้ ... */
+        text-overflow: ellipsis;
+        /* ถ้ายาวเกินให้ ... */
     }
 
     .sidebar-link i {
         width: 20px;
         text-align: center;
         margin-right: 8px;
-        font-size: 0.95rem; /* ไอคอนเล็กลงนิดนึง */
+        font-size: 0.95rem;
+        /* ไอคอนเล็กลงนิดนึง */
         opacity: 0.8;
     }
 
@@ -108,13 +129,16 @@ $current_page = $_SERVER['PHP_SELF'];
     }
 
     .sidebar-link.active {
-        background: #0d6efd; /* สีน้ำเงิน Bootstrap */
+        background: #0d6efd;
+        /* สีน้ำเงิน Bootstrap */
         background: linear-gradient(90deg, #0d6efd 0%, #0a58ca 100%);
         color: #fff;
         box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
     }
-    
-    .sidebar-link.active i { opacity: 1; }
+
+    .sidebar-link.active i {
+        opacity: 1;
+    }
 
     /* Submenu */
     .sidebar-submenu {
@@ -124,7 +148,8 @@ $current_page = $_SERVER['PHP_SELF'];
     }
 
     .sidebar-submenu .sidebar-link {
-        font-size: 0.78rem; /* เมนูย่อยเล็กกว่าปกตินิดนึง */
+        font-size: 0.78rem;
+        /* เมนูย่อยเล็กกว่าปกตินิดนึง */
         padding: 5px 10px;
     }
 
@@ -142,14 +167,17 @@ $current_page = $_SERVER['PHP_SELF'];
         color: #fff;
         transition: 0.2s;
     }
-    
+
     .user-avatar {
-        width: 32px; /* ลดขนาด Avatar */
+        width: 32px;
+        /* ลดขนาด Avatar */
         height: 32px;
         background: #0d6efd;
         color: white;
         border-radius: 50%;
-        display: flex; align-items: center; justify-content: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         font-weight: bold;
         margin-right: 8px;
         font-size: 0.9rem;
@@ -157,9 +185,17 @@ $current_page = $_SERVER['PHP_SELF'];
 
     /* --- Responsive Logic --- */
     @media (min-width: 768px) {
-        #sidebar-wrapper { margin-left: 0; }
-        #page-content-wrapper { margin-left: var(--sidebar-width); }
-        #sidebar-wrapper.active { margin-left: calc(var(--sidebar-width) * -1); }
+        #sidebar-wrapper {
+            margin-left: 0;
+        }
+
+        #page-content-wrapper {
+            margin-left: var(--sidebar-width);
+        }
+
+        #sidebar-wrapper.active {
+            margin-left: calc(var(--sidebar-width) * -1);
+        }
     }
 </style>
 
@@ -168,10 +204,8 @@ $current_page = $_SERVER['PHP_SELF'];
         <i class="bi bi-cpu-fill me-2 text-primary"></i>
         <span>IT Support <span class="text-primary">Sys</span></span>
     </div>
-
     <div class="sidebar-menu">
-
-        <a href="<?= $base_path ?>index.php" class="sidebar-link <?= isActive('index.php', $current_page) && strpos($current_page, 'modules') === false ? 'active' : '' ?>">
+        <a href="<?= $base_path ?>admin.php" class="sidebar-link <?= isActive('index.php', $current_page) && strpos($current_page, 'modules') === false ? 'active' : '' ?>">
             <i class="bi bi-speedometer2"></i> <span>แดชบอร์ด (Dashboard)</span>
         </a>
 
@@ -208,7 +242,7 @@ $current_page = $_SERVER['PHP_SELF'];
         </a>
 
         <div class="sidebar-heading">Reporting</div>
-        
+
         <a href="<?= $base_path ?>modules/reports/index.php" class="sidebar-link <?= isActive('reports', $current_page) ?>">
             <i class="bi bi-file-earmark-bar-graph"></i> <span>รายงาน (Reports)</span>
         </a>
@@ -267,7 +301,9 @@ $current_page = $_SERVER['PHP_SELF'];
             </a>
             <ul class="dropdown-menu dropdown-menu-dark shadow small">
                 <li><a class="dropdown-item" href="#"><i class="bi bi-person me-2"></i>โปรไฟล์ (Profile)</a></li>
-                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <hr class="dropdown-divider">
+                </li>
                 <li><a class="dropdown-item text-danger" href="<?= $base_path ?>logout.php"><i class="bi bi-box-arrow-right me-2"></i>ออกจากระบบ (Logout)</a></li>
             </ul>
         </div>

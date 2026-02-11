@@ -12,7 +12,7 @@ $sqlActive = "SELECT b.*, a.asset_code, a.name as asset_name, u.fullname as user
               WHERE b.status = 'borrowed' ORDER BY b.id DESC";
 $activeItems = $pdo->query($sqlActive)->fetchAll();
 
-// Fetch History (Returned) - Limit 50
+// Fetch History (Returned)
 $sqlHistory = "SELECT b.*, a.asset_code, a.name as asset_name, u.fullname as user_name 
                FROM borrow_transactions b
                JOIN assets a ON b.asset_id = a.id
@@ -20,10 +20,8 @@ $sqlHistory = "SELECT b.*, a.asset_code, a.name as asset_name, u.fullname as use
                WHERE b.status = 'returned' ORDER BY b.return_date DESC LIMIT 50";
 $historyItems = $pdo->query($sqlHistory)->fetchAll();
 
-// Fetch Available Assets for Borrowing
 $assets = $pdo->query("SELECT id, asset_code, name FROM assets WHERE status IN ('spare', 'active') AND current_user_id IS NULL ORDER BY asset_code ASC")->fetchAll();
-// Fetch Users
-$users = $pdo->query("SELECT id, fullname, department_id FROM users WHERE is_active = 1 ORDER BY fullname ASC")->fetchAll();
+$users = $pdo->query("SELECT id, fullname FROM users WHERE is_active = 1 ORDER BY fullname ASC")->fetchAll();
 ?>
 
 <?php require_once '../../includes/header.php'; ?>
@@ -37,15 +35,8 @@ $users = $pdo->query("SELECT id, fullname, department_id FROM users WHERE is_act
     </nav>
 
     <div class="main-content-scroll">
-        <div class="container-fluid p-3"> <?php if (isset($_GET['msg'])): ?>
-                <script>
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'สำเร็จ!',
-                        timer: 1500,
-                        showConfirmButton: false
-                    });
-                </script>
+        <div class="container-fluid p-2"> <?php if (isset($_GET['msg'])): ?>
+                <script>Swal.fire({icon: 'success', title: 'สำเร็จ!', timer: 1500, showConfirmButton: false});</script>
             <?php endif; ?>
 
             <div class="card border-0 shadow-sm">
@@ -61,9 +52,10 @@ $users = $pdo->query("SELECT id, fullname, department_id FROM users WHERE is_act
                                 <i class="bi bi-archive me-1"></i> ประวัติการคืน (History)
                             </a>
                         </li>
-                        <button class="btn btn-sm btn-primary" onclick="openBorrowModal()">
-                            <i class="bi bi-plus-lg me-1"></i> ทำรายการยืม (New Borrow)
-                        </button>
+                    </ul>
+                    <button class="btn btn-sm btn-primary shadow-sm" onclick="openBorrowModal()">
+                        <i class="bi bi-plus-lg me-1"></i> ทำรายการยืม
+                    </button>
                 </div>
 
                 <div class="card-body p-0">
@@ -73,19 +65,19 @@ $users = $pdo->query("SELECT id, fullname, department_id FROM users WHERE is_act
                                 <table class="table table-hover table-sm align-middle mb-0 datatable" style="font-size: 0.85rem;">
                                     <thead class="table-light">
                                         <tr>
-                                            <th class="ps-3">เลขที่รายการ (Transaction No.)</th>
+                                            <th class="ps-3">เลขที่</th>
                                             <th>ผู้ยืม</th>
                                             <th>อุปกรณ์</th>
                                             <th>วันที่ยืม</th>
-                                            <th>กำหนดคืน (Due Date)</th>
-                                            <th class="text-end pe-3">จัดการ (Action)</th>
+                                            <th>กำหนดคืน</th>
+                                            <th class="text-end pe-3">จัดการ</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         <?php foreach ($activeItems as $row):
                                             $is_overdue = ($row['return_due_date'] && strtotime($row['return_due_date']) < time());
                                             $due_text = $row['return_due_date'] ? date('d/m/Y', strtotime($row['return_due_date'])) : '-';
-                                            if ($is_overdue) $due_text = "<span class='badge bg-danger'>$due_text (เกินกำหนด)</span>";
+                                            if ($is_overdue) $due_text = "<span class='badge bg-danger'>$due_text (เกิน)</span>";
                                         ?>
                                             <tr>
                                                 <td class="ps-3 text-primary fw-bold"><?= $row['transaction_no'] ?></td>
@@ -94,11 +86,15 @@ $users = $pdo->query("SELECT id, fullname, department_id FROM users WHERE is_act
                                                     <div class="fw-bold"><?= $row['asset_code'] ?></div>
                                                     <small class="text-muted"><?= $row['asset_name'] ?></small>
                                                 </td>
-                                                <td><?= date('d/m/Y H:i', strtotime($row['borrow_date'])) ?></td>
+                                                <td><?= date('d/m H:i', strtotime($row['borrow_date'])) ?></td>
                                                 <td><?= $due_text ?></td>
                                                 <td class="text-end pe-3">
-                                                    <a href="print_form.php?id=<?= $row['id'] ?>" target="_blank" class="btn btn-sm btn-light border py-0 me-1" title="พิมพ์ใบยืม"><i class="bi bi-printer"></i></a>
-                                                    <a href="process.php?action=return&id=<?= $row['id'] ?>&aid=<?= $row['asset_id'] ?>" class="btn btn-sm btn-success border py-0" onclick="return confirm('ยืนยันรับของคืน? ตรวจสอบสภาพเรียบร้อยแล้ว')"><i class="bi bi-box-arrow-in-down-left me-1"></i> รับคืน</a>
+                                                    <a href="print_form.php?id=<?= $row['id'] ?>" target="_blank" class="btn btn-sm btn-light border py-0 me-1 shadow-sm"><i class="bi bi-printer"></i></a>
+                                                    
+                                                    <button class="btn btn-sm btn-success border py-0 shadow-sm" 
+                                                        onclick="confirmReturn('<?= $row['id'] ?>', '<?= $row['asset_id'] ?>', '<?= $row['asset_code'] ?>')">
+                                                        <i class="bi bi-box-arrow-in-down-left me-1"></i> รับคืน
+                                                    </button>
                                                 </td>
                                             </tr>
                                         <?php endforeach; ?>
@@ -124,8 +120,8 @@ $users = $pdo->query("SELECT id, fullname, department_id FROM users WHERE is_act
                                             <tr>
                                                 <td class="ps-3 text-muted"><?= $row['transaction_no'] ?></td>
                                                 <td><?= $row['user_name'] ?></td>
-                                                <td><?= $row['asset_code'] ?> - <?= $row['asset_name'] ?></td>
-                                                <td><?= date('d/m/Y H:i', strtotime($row['return_date'])) ?></td>
+                                                <td><?= $row['asset_code'] ?></td>
+                                                <td><?= date('d/m H:i', strtotime($row['return_date'])) ?></td>
                                                 <td><span class="badge bg-secondary">คืนแล้ว</span></td>
                                             </tr>
                                         <?php endforeach; ?>
@@ -142,24 +138,27 @@ $users = $pdo->query("SELECT id, fullname, department_id FROM users WHERE is_act
 
 <div class="modal fade" id="borrowModal" tabindex="-1">
     <div class="modal-dialog">
-        <div class="modal-content">
+        <div class="modal-content rounded-4 border-0 shadow">
             <form action="process.php" method="POST">
                 <input type="hidden" name="action" value="borrow">
-                <div class="modal-header bg-primary text-white py-2">
-                    <h6 class="modal-title fw-bold">ทำรายการยืม (New Borrow)</h6><button type="button" class="btn-close btn-close-white btn-sm" data-bs-dismiss="modal"></button>
+                <input type="hidden" name="csrf_token" value="<?= generateCSRFToken() ?>">
+
+                <div class="modal-header bg-primary text-white py-2 rounded-top-4">
+                    <h6 class="modal-title fw-bold"><i class="bi bi-arrow-left-right me-2"></i>ทำรายการยืม (New Borrow)</h6>
+                    <button type="button" class="btn-close btn-close-white btn-sm" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <div class="mb-2">
-                        <label class="form-label small fw-bold">ผู้ยืม (Borrower) *</label>
+                        <label class="form-label small fw-bold">ผู้ยืม *</label>
                         <select name="user_id" class="form-select form-select-sm select2" required>
                             <option value="">-- เลือกรายชื่อ --</option>
                             <?php foreach ($users as $u): ?><option value="<?= $u['id'] ?>"><?= $u['fullname'] ?></option><?php endforeach; ?>
                         </select>
                     </div>
                     <div class="mb-2">
-                        <label class="form-label small fw-bold">อุปกรณ์ที่ยืม (Asset) *</label>
+                        <label class="form-label small fw-bold">อุปกรณ์ *</label>
                         <select name="asset_id" class="form-select form-select-sm select2" required>
-                            <option value="">-- เลือกอุปกรณ์ (เฉพาะสถานะว่าง) --</option>
+                            <option value="">-- เลือกอุปกรณ์ (สถานะว่าง) --</option>
                             <?php foreach ($assets as $a): ?><option value="<?= $a['id'] ?>">[<?= $a['asset_code'] ?>] <?= $a['name'] ?></option><?php endforeach; ?>
                         </select>
                     </div>
@@ -169,7 +168,7 @@ $users = $pdo->query("SELECT id, fullname, department_id FROM users WHERE is_act
                             <input type="datetime-local" name="borrow_date" class="form-control form-control-sm" value="<?= date('Y-m-d\TH:i') ?>" required>
                         </div>
                         <div class="col-6">
-                            <label class="form-label small fw-bold">กำหนดคืน (Due Date)</label>
+                            <label class="form-label small fw-bold">กำหนดคืน</label>
                             <input type="date" name="return_due_date" class="form-control form-control-sm">
                         </div>
                     </div>
@@ -178,7 +177,9 @@ $users = $pdo->query("SELECT id, fullname, department_id FROM users WHERE is_act
                         <textarea name="note" class="form-control form-control-sm" rows="2" placeholder="เช่น ยืมไป Present งานลูกค้า"></textarea>
                     </div>
                 </div>
-                <div class="modal-footer py-1 border-top-0"><button type="submit" class="btn btn-sm btn-primary">บันทึกรายการ</button></div>
+                <div class="modal-footer py-2 border-top-0 bg-light rounded-bottom-4">
+                    <button type="submit" class="btn btn-sm btn-primary w-100">บันทึกรายการ</button>
+                </div>
             </form>
         </div>
     </div>
@@ -190,5 +191,22 @@ $users = $pdo->query("SELECT id, fullname, department_id FROM users WHERE is_act
         new bootstrap.Modal(document.getElementById('borrowModal')).show();
     }
 
-    // ✅ Removed 'menu-toggle' event listener
+    // ฟังก์ชันรับคืนของ (Custom Swal)
+    function confirmReturn(id, assetId, assetCode) {
+        Swal.fire({
+            title: 'ยืนยันรับคืน?',
+            text: `อุปกรณ์: ${assetCode}\nตรวจสอบสภาพเรียบร้อยแล้วใช่หรือไม่?`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#198754',
+            confirmButtonText: 'ยืนยันรับคืน',
+            cancelButtonText: 'ยกเลิก'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // ส่ง CSRF Token ไปด้วยผ่าน GET อาจจะไม่ปลอดภัยที่สุดแต่สะดวก
+                // ทางที่ดีควรทำเป็น POST form แต่ในที่นี้ใช้ GET เพื่อความง่ายตามโครงสร้างเดิม
+                window.location.href = `process.php?action=return&id=${id}&aid=${assetId}&csrf_token=<?= generateCSRFToken() ?>`;
+            }
+        });
+    }
 </script>

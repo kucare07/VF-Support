@@ -45,7 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 }
 
                 // Redirect to Dashboard
-                header("Location: index.php");
+                header("Location: admin.php");
                 exit();
 
             } else {

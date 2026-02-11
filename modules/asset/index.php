@@ -141,7 +141,7 @@ $assets = $stmt->fetchAll();
 
                 <div class="card-body p-0">
                     <div class="table-responsive">
-                        <table class="table table-hover table-sm align-middle mb-0 datatable" style="font-size: 0.85rem;">
+                        <table id="assetTable" class="table table-hover table-sm align-middle mb-0 datatable" style="font-size: 0.85rem;">
                             <thead class="table-light">
                                 <tr>
                                     <th class="ps-3">รหัสทรัพย์สิน (Code)</th>
@@ -156,56 +156,58 @@ $assets = $stmt->fetchAll();
                             <tbody>
                                 <?php if (count($assets) > 0): ?>
                                     <?php foreach ($assets as $item):
-                                        // Encode Data for JS
                                         $jsonData = htmlspecialchars(json_encode($item), ENT_QUOTES, 'UTF-8');
+                                        
+                                        // เตรียมตัวแปร (ป้องกัน Error หากข้อมูลว่าง)
+                                        $code = htmlspecialchars($item['asset_code'] ?? '-');
+                                        $name = htmlspecialchars($item['name'] ?? '-');
+                                        $brand = htmlspecialchars($item['brand'] ?? '');
+                                        $model = htmlspecialchars($item['model'] ?? '');
+                                        $type = htmlspecialchars($item['type_name'] ?? '-');
+                                        $location = htmlspecialchars($item['location_name'] ?? '-');
+                                        $owner = htmlspecialchars($item['owner_name'] ?? '-');
                                     ?>
                                         <tr>
                                             <td class="ps-3 fw-bold text-primary">
-                                                <?= $item['asset_code'] ?>
-                                                <?php if ($item['image']): ?>
+                                                <?= $code ?>
+                                                <?php if (!empty($item['image'])): ?>
                                                     <i class="bi bi-image text-muted ms-1" title="มีรูปภาพ"></i>
                                                 <?php endif; ?>
                                             </td>
                                             <td>
-                                                <div class="fw-bold"><?= $item['name'] ?></div>
-                                                <small class="text-muted"><?= $item['brand'] ?> <?= $item['model'] ?></small>
+                                                <div class="fw-bold"><?= $name ?></div>
+                                                <small class="text-muted"><?= $brand ?> <?= $model ?></small>
                                             </td>
-                                            <td><span class="badge bg-light text-dark border"><?= $item['type_name'] ?></span></td>
-                                            <td><?= $item['location_name'] ?: '-' ?></td>
+                                            <td><span class="badge bg-light text-dark border"><?= $type ?></span></td>
+                                            <td><?= $location ?></td>
                                             <td><?php
-                                                $st_color = match ($item['status']) {
+                                                $st_val = $item['status'] ?? 'active';
+                                                $st_color = match ($st_val) {
                                                     'active' => 'success',
                                                     'repair' => 'warning',
                                                     'write_off' => 'secondary',
                                                     default => 'info'
                                                 };
-                                                $st_text = match ($item['status']) {
+                                                $st_text = match ($st_val) {
                                                     'active' => 'ปกติ',
                                                     'repair' => 'ส่งซ่อม',
                                                     'write_off' => 'ตัดจำหน่าย',
                                                     'spare' => 'สำรอง',
-                                                    default => $item['status']
+                                                    default => ucfirst($st_val)
                                                 };
-                                                ?><span class="badge bg-<?= $st_color ?>"><?= $st_text ?></span></td>
-                                            <td><?= $item['owner_name'] ?: '-' ?></td>
+                                                ?><span class="badge bg-<?= $st_color ?>"><?= $st_text ?></span>
+                                            </td>
+                                            <td><?= $owner ?></td>
                                             <td class="text-end pe-3">
                                                 <a href="print_qr.php?id=<?= $item['id'] ?>" target="_blank" class="btn btn-sm btn-light border py-0 me-1 shadow-sm" title="พิมพ์ QR Code"><i class="bi bi-qr-code"></i></a>
-
                                                 <button class="btn btn-sm btn-light border text-info py-0 me-1 shadow-sm" onclick="openViewModal('<?= $jsonData ?>')"><i class="bi bi-eye"></i></button>
                                                 <button class="btn btn-sm btn-light border text-warning py-0 me-1 shadow-sm" onclick="openEditModal('<?= $jsonData ?>')"><i class="bi bi-pencil"></i></button>
-                                                
-                                                <button class="btn btn-sm btn-light border text-danger py-0 shadow-sm" 
-                                                    onclick="confirmDelete('process.php?action=delete&id=<?= $item['id'] ?>', 'ต้องการลบ <?= $item['asset_code'] ?> ใช่หรือไม่?')">
-                                                    <i class="bi bi-trash"></i>
-                                                </button>
+                                                <button class="btn btn-sm btn-light border text-danger py-0 shadow-sm" onclick="confirmDelete('process.php?action=delete&id=<?= $item['id'] ?>', 'ต้องการลบ <?= $code ?> ใช่หรือไม่?')"><i class="bi bi-trash"></i></button>
                                             </td>
                                         </tr>
                                     <?php endforeach; ?>
-                                <?php else: ?>
-                                    <tr>
-                                        <td colspan="7" class="text-center py-4 text-muted">ไม่พบข้อมูล</td>
-                                    </tr>
                                 <?php endif; ?>
+                                </tbody>
                             </tbody>
                         </table>
                     </div>
