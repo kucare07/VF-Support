@@ -1,15 +1,16 @@
 <?php
 session_start();
 require_once 'config/db_connect.php';
-require_once 'includes/functions.php'; // เรียกใช้ฟังก์ชันแปลงวันที่
+require_once 'includes/functions.php'; // เรียกใช้ฟังก์ชันต่างๆ เช่น thai_date
 
+// ตรวจสอบการ Login
 if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit();
 }
 
 // --- 1. STATS: ดึงตัวเลขสรุป ---
-// งานค้าง (ไม่รวม Closed/Resolved)
+// งานค้าง (New + Assigned + Pending)
 $ticket_pending = $pdo->query("SELECT COUNT(*) FROM tickets WHERE status NOT IN ('resolved', 'closed')")->fetchColumn();
 // งานเกินกำหนด (SLA Breached)
 $ticket_overdue = $pdo->query("SELECT COUNT(*) FROM tickets WHERE status NOT IN ('resolved', 'closed') AND sla_due_date < NOW()")->fetchColumn();
@@ -92,9 +93,11 @@ $low_stock_items = $pdo->query("SELECT name, qty_on_hand, min_stock, unit FROM i
     </nav>
 
     <div class="main-content-scroll">
-        <div class="container-fluid p-3"> <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="container-fluid p-3">
+            
+            <div class="d-flex justify-content-between align-items-center mb-4">
                 <div>
-                    <h4 class="fw-bold text-dark m-0">ยินดีต้อนรับ, <?= $_SESSION['fullname'] ?>! 👋</h4>
+                    <h4 class="fw-bold text-dark m-0">ยินดีต้อนรับ, <?= htmlspecialchars($_SESSION['fullname']) ?>! 👋</h4>
                     <small class="text-muted">นี่คือสรุปสถานะงานไอทีล่าสุดของคุณ</small>
                 </div>
                 <div>
@@ -197,10 +200,10 @@ $low_stock_items = $pdo->query("SELECT name, qty_on_hand, min_stock, unit FROM i
                                         $icon = $is_late ? '<i class="bi bi-exclamation-circle-fill"></i>' : '';
                                     ?>
                                         <tr>
-                                            <td class="fw-bold">#<?= $t['id'] ?></td>
+                                            <td class="fw-bold">#<?= str_pad($t['id'], 5, '0', STR_PAD_LEFT) ?></td>
                                             <td>
-                                                <div class="text-truncate" style="max-width: 200px;"><?= $t['description'] ?></div>
-                                                <small class="text-muted"><?= $t['fullname'] ?></small>
+                                                <div class="text-truncate" style="max-width: 200px;"><?= htmlspecialchars($t['description']) ?></div>
+                                                <small class="text-muted"><?= htmlspecialchars($t['fullname']) ?></small>
                                             </td>
                                             <td class="<?= $sla_color ?>">
                                                 <?= $icon ?> <?= date('d/m H:i', strtotime($t['sla_due_date'])) ?>
@@ -212,9 +215,11 @@ $low_stock_items = $pdo->query("SELECT name, qty_on_hand, min_stock, unit FROM i
                                             </td>
                                         </tr>
                                     <?php endforeach; ?>
-                                    <?php if (count($urgent_tickets) == 0): ?><tr>
+                                    <?php if (count($urgent_tickets) == 0): ?>
+                                    <tr>
                                             <td colspan="4" class="text-center py-3 text-muted">ไม่มีงานค้าง เยี่ยมมาก! 👍</td>
-                                    </tr><?php endif; ?>
+                                    </tr>
+                                    <?php endif; ?>
                                 </tbody>
                             </table>
                         </div>
@@ -230,7 +235,7 @@ $low_stock_items = $pdo->query("SELECT name, qty_on_hand, min_stock, unit FROM i
                             <ul class="list-group list-group-flush small">
                                 <?php foreach ($low_stock_items as $item): ?>
                                     <li class="list-group-item d-flex justify-content-between align-items-center px-3 py-2">
-                                        <div><span class="fw-bold"><?= $item['name'] ?></span></div>
+                                        <div><span class="fw-bold"><?= htmlspecialchars($item['name']) ?></span></div>
                                         <div class="text-end">
                                             <span class="badge bg-danger rounded-pill"><?= $item['qty_on_hand'] ?> <?= $item['unit'] ?></span>
                                             <div style="font-size: 10px;" class="text-muted">Min: <?= $item['min_stock'] ?></div>
@@ -266,9 +271,7 @@ $low_stock_items = $pdo->query("SELECT name, qty_on_hand, min_stock, unit FROM i
 <?php require_once 'includes/footer.php'; ?>
 
 <script>
-    // ✅ 2. ลบ Event Listener ของ menu-toggle ออกแล้ว (เพราะเราลบปุ่มไปแล้ว)
-
-    // --- Chart 1: Trend ---
+    // --- Chart 1: Trend (งานย้อนหลัง 7 วัน) ---
     const ctxTrend = document.getElementById('trendChart').getContext('2d');
     new Chart(ctxTrend, {
         type: 'line',
@@ -281,7 +284,10 @@ $low_stock_items = $pdo->query("SELECT name, qty_on_hand, min_stock, unit FROM i
                 backgroundColor: 'rgba(78, 115, 223, 0.05)',
                 tension: 0.3,
                 fill: true,
-                pointRadius: 4
+                pointRadius: 4,
+                pointBackgroundColor: '#fff',
+                pointBorderColor: '#4e73df',
+                pointHoverRadius: 6
             }]
         },
         options: {
@@ -291,12 +297,17 @@ $low_stock_items = $pdo->query("SELECT name, qty_on_hand, min_stock, unit FROM i
                 legend: { display: false }
             },
             scales: {
-                y: { beginAtZero: true, ticks: { stepSize: 1 } }
-            }
+                y: { beginAtZero: true, ticks: { stepSize: 1 } },
+                x: { grid: { display: false } }
+            },
+            interaction: {
+                intersect: false,
+                mode: 'index',
+            },
         }
     });
 
-    // --- Chart 2: Categories ---
+    // --- Chart 2: Categories (สัดส่วนปัญหา) ---
     const ctxCat = document.getElementById('catChart').getContext('2d');
     new Chart(ctxCat, {
         type: 'doughnut',
@@ -304,8 +315,9 @@ $low_stock_items = $pdo->query("SELECT name, qty_on_hand, min_stock, unit FROM i
             labels: <?= $cat_labels ?>,
             datasets: [{
                 data: <?= $cat_values ?>,
-                backgroundColor: ['#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b', '#858796'],
-                borderWidth: 0
+                backgroundColor: ['#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b', #858796'],
+                borderWidth: 2,
+                borderColor: '#fff'
             }]
         },
         options: {
@@ -314,9 +326,10 @@ $low_stock_items = $pdo->query("SELECT name, qty_on_hand, min_stock, unit FROM i
             plugins: {
                 legend: {
                     position: 'bottom',
-                    labels: { boxWidth: 10, font: { size: 11 } }
+                    labels: { boxWidth: 10, font: { size: 11 }, usePointStyle: true }
                 }
-            }
+            },
+            cutout: '70%'
         }
     });
 </script>

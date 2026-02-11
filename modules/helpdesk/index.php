@@ -4,7 +4,6 @@ require_once '../../config/db_connect.php';
 require_once '../../includes/functions.php';
 
 // --- Filter Logic (Secure) ---
-// ส่วนนี้ปรับให้ใช้ Prepared Statement เพื่อป้องกัน SQL Injection
 $sql = "SELECT t.*, 
         u.fullname as requester_name, u.email as req_email, u.phone as req_phone,
         d.name as dept_name,
@@ -20,7 +19,6 @@ $sql = "SELECT t.*,
         LEFT JOIN locations l ON a.location_id = l.id
         ORDER BY t.priority = 'critical' DESC, t.created_at DESC";
 
-// (ถ้าอนาคตมี Search ให้ใส่เงื่อนไข WHERE ... LIKE ? ตรงนี้)
 $stmt = $pdo->prepare($sql);
 $stmt->execute();
 $tickets = $stmt->fetchAll();
@@ -34,6 +32,60 @@ $users_all = $pdo->query("SELECT * FROM users WHERE is_active = 1 ORDER BY fulln
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <?php require_once '../../includes/sidebar.php'; ?>
 
+<style>
+    :root { --primary-color: #2563eb; }
+    
+    /* Gradient Header เหมือนหน้าแรก */
+    .header-gradient {
+        background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+        color: white;
+        padding: 20px 25px;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    /* Upload Area */
+    .upload-area {
+        border: 2px dashed #cbd5e1;
+        border-radius: 10px;
+        padding: 20px;
+        text-align: center;
+        cursor: pointer;
+        transition: 0.2s;
+        background: #f8fafc;
+    }
+    .upload-area:hover {
+        border-color: var(--primary-color);
+        background: #eff6ff;
+    }
+    
+    /* Modern Inputs */
+    .form-control, .form-select {
+        background-color: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 10px 15px;
+        font-size: 0.9rem;
+    }
+    .form-control:focus, .form-select:focus {
+        background-color: #fff;
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+    
+    /* Button Animation */
+    .hover-scale { transition: 0.2s; }
+    .hover-scale:hover { transform: scale(1.02); }
+    
+    .preview-img {
+        max-height: 150px;
+        display: none;
+        margin-top: 10px;
+        border-radius: 8px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+</style>
+
 <div id="page-content-wrapper">
     <nav class="main-navbar">
         <span class="fw-bold text-dark">Helpdesk (Tickets)</span>
@@ -41,15 +93,16 @@ $users_all = $pdo->query("SELECT * FROM users WHERE is_active = 1 ORDER BY fulln
     </nav>
 
     <div class="main-content-scroll">
-        <div class="container-fluid p-2"> <?php if (isset($_GET['msg'])): ?>
+        <div class="container-fluid p-2"> 
+            <?php if (isset($_GET['msg'])): ?>
                 <script>Swal.fire({icon: 'success', title: 'สำเร็จ!', timer: 1500, showConfirmButton: false});</script>
             <?php endif; ?>
 
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
                     <h6 class="fw-bold text-primary m-0"><i class="bi bi-list-columns-reverse me-2"></i>รายการแจ้งซ่อม</h6>
-                    <button class="btn btn-sm btn-primary shadow-sm" onclick="openAddModal()">
-                        <i class="bi bi-plus-circle me-1"></i> แจ้งปัญหา/งานซ่อม
+                    <button class="btn btn-primary shadow-sm hover-scale rounded-pill px-4" onclick="openAddModal()">
+                        <i class="bi bi-plus-lg me-1"></i> แจ้งปัญหา/งานซ่อม
                     </button>
                 </div>
 
@@ -69,7 +122,8 @@ $users_all = $pdo->query("SELECT * FROM users WHERE is_active = 1 ORDER BY fulln
                             </thead>
                             <tbody>
                                 <?php foreach ($tickets as $row):
-                                    $json = htmlspecialchars(json_encode($row), ENT_QUOTES, 'UTF-8');
+                                    $json = htmlspecialchars(json_encode($row, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP), ENT_QUOTES, 'UTF-8');
+                                    
                                     // SLA Calculation
                                     $is_overdue = false;
                                     $sla_text = '-';
@@ -136,88 +190,103 @@ $users_all = $pdo->query("SELECT * FROM users WHERE is_active = 1 ORDER BY fulln
 
 <div class="modal fade" id="addModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
-        <div class="modal-content rounded-4 border-0 shadow">
+        <div class="modal-content rounded-4 border-0 shadow overflow-hidden">
             <form action="process.php" method="POST" enctype="multipart/form-data">
                 <input type="hidden" name="action" value="add">
                 <input type="hidden" name="csrf_token" value="<?= generateCSRFToken() ?>">
 
-                <div class="modal-header bg-primary text-white py-2 rounded-top-4">
-                    <h6 class="modal-title fw-bold"><i class="bi bi-plus-circle me-2"></i>แจ้งปัญหา / งานซ่อม</h6>
-                    <button type="button" class="btn-close btn-close-white btn-sm" data-bs-dismiss="modal"></button>
+                <div class="header-gradient">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="fw-bold m-0"><i class="bi bi-pencil-square me-2"></i>แจ้งปัญหา / งานซ่อม</h5>
+                            <p class="small m-0 text-white-50 mt-1">กรอกรายละเอียดงานซ่อมเพื่อมอบหมายงาน</p>
+                        </div>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
                 </div>
 
-                <div class="modal-body">
-                    <div class="card bg-light border-0 mb-3">
-                        <div class="card-body py-2">
-                            <div class="row align-items-center">
-                                <label class="col-sm-3 col-form-label small fw-bold">ผู้แจ้ง:</label>
-                                <div class="col-sm-9">
-                                    <?php if ($_SESSION['role'] == 'admin' || $_SESSION['role'] == 'technician'): ?>
-                                        <select name="requester_id" class="form-select form-select-sm select2">
-                                            <option value="<?= $_SESSION['user_id'] ?>">แจ้งเอง (<?= $_SESSION['fullname'] ?>)</option>
-                                            <?php foreach ($users_all as $u): ?>
-                                                <option value="<?= $u['id'] ?>"><?= $u['fullname'] ?> (<?= $u['username'] ?>)</option>
-                                            <?php endforeach; ?>
-                                        </select>
-                                    <?php else: ?>
-                                        <input type="text" class="form-control form-control-sm" value="แจ้งเอง (<?= $_SESSION['fullname'] ?>)" readonly>
-                                        <input type="hidden" name="requester_id" value="<?= $_SESSION['user_id'] ?>">
-                                    <?php endif; ?>
-                                </div>
-                            </div>
+                <div class="modal-body p-4 bg-white">
+                    
+                    <h6 class="text-primary fw-bold small mb-3 border-bottom pb-2"><i class="bi bi-person-badge me-1"></i> ข้อมูลผู้แจ้ง</h6>
+                    
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-8">
+                            <label class="small text-muted fw-bold mb-1">ผู้แจ้ง (Requester)</label>
+                            <?php if ($_SESSION['role'] == 'admin' || $_SESSION['role'] == 'technician'): ?>
+                                <select name="requester_id" class="form-select select2">
+                                    <option value="<?= $_SESSION['user_id'] ?>">แจ้งเอง (<?= $_SESSION['fullname'] ?>)</option>
+                                    <?php foreach ($users_all as $u): ?>
+                                        <option value="<?= $u['id'] ?>"><?= $u['fullname'] ?> (<?= $u['dept_name'] ?>)</option>
+                                    <?php endforeach; ?>
+                                </select>
+                            <?php else: ?>
+                                <input type="text" class="form-control" value="แจ้งเอง (<?= $_SESSION['fullname'] ?>)" readonly>
+                                <input type="hidden" name="requester_id" value="<?= $_SESSION['user_id'] ?>">
+                            <?php endif; ?>
                         </div>
                     </div>
 
-                    <div class="row g-2">
+                    <h6 class="text-primary fw-bold small mb-3 border-bottom pb-2"><i class="bi bi-pc-display me-1"></i> รายละเอียดปัญหา</h6>
+
+                    <div class="row g-3">
                         <div class="col-md-6">
-                            <label class="form-label small fw-bold mb-1">ประเภทงาน <span class="text-danger">*</span></label>
-                            <select name="type" class="form-select form-select-sm">
+                            <label class="small text-muted fw-bold mb-1">ประเภทงาน <span class="text-danger">*</span></label>
+                            <select name="type" class="form-select">
                                 <option value="incident">🚨 Incident (แจ้งปัญหา/เสีย)</option>
                                 <option value="request">❓ Request (คำร้องขอ/ขอของ)</option>
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label small fw-bold mb-1">หมวดหมู่</label>
-                            <select name="category_id" class="form-select form-select-sm">
+                            <label class="small text-muted fw-bold mb-1">หมวดหมู่</label>
+                            <select name="category_id" class="form-select">
                                 <option value="">-- ระบุหมวดหมู่ --</option>
                                 <?php foreach ($categories as $c): ?><option value="<?= $c['id'] ?>"><?= $c['name'] ?></option><?php endforeach; ?>
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label small fw-bold mb-1">อุปกรณ์ (ถ้ามี)</label>
-                            <div class="input-group input-group-sm">
-                                <input type="text" name="asset_code" class="form-control" placeholder="ระบุรหัสทรัพย์สิน">
-                                <button class="btn btn-outline-secondary" type="button"><i class="bi bi-qr-code"></i></button>
+                            <label class="small text-muted fw-bold mb-1">อุปกรณ์ (ถ้ามี)</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-end-0"><i class="bi bi-qr-code"></i></span>
+                                <input type="text" name="asset_code" class="form-control border-start-0" placeholder="รหัสทรัพย์สิน (Asset Code)">
                             </div>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label small fw-bold mb-1">ความเร่งด่วน</label>
-                            <select name="priority" class="form-select form-select-sm">
-                                <option value="low">Low (+5 วัน)</option>
-                                <option value="medium" selected>Medium (+3 วัน)</option>
-                                <option value="high">High (+1 วัน)</option>
-                                <option value="critical">Critical (+4 ชม.)</option>
+                            <label class="small text-muted fw-bold mb-1">ความเร่งด่วน</label>
+                            <select name="priority" class="form-select">
+                                <option value="low">Low (ไม่ด่วน)</option>
+                                <option value="medium" selected>Medium (ปานกลาง)</option>
+                                <option value="high">High (ด่วน)</option>
+                                <option value="critical">Critical (ด่วนที่สุด)</option>
                             </select>
                         </div>
                         <div class="col-12">
-                            <label class="form-label small fw-bold mb-1">รายละเอียดปัญหา <span class="text-danger">*</span></label>
-                            <textarea name="description" class="form-control form-control-sm" rows="3" required></textarea>
+                            <label class="small text-muted fw-bold mb-1">รายละเอียดปัญหา <span class="text-danger">*</span></label>
+                            <textarea name="description" class="form-control" rows="4" placeholder="ระบุอาการที่พบโดยละเอียด..." required></textarea>
                         </div>
+                        
                         <div class="col-12">
-                            <label class="form-label small fw-bold mb-1">แนบรูปภาพ</label>
-                            <input type="file" name="attachment" class="form-control form-control-sm">
+                            <label class="small text-muted fw-bold mb-2">แนบรูปภาพ (ถ้ามี)</label>
+                            <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+                                <i class="bi bi-cloud-arrow-up fs-2 text-primary"></i>
+                                <div class="small text-muted mt-1">คลิกเพื่อเลือกรูปภาพ</div>
+                                <input type="file" name="attachment" id="fileInput" class="d-none" accept="image/*" onchange="previewImage(this)">
+                                <img id="imgPreview" class="preview-img mx-auto">
+                            </div>
                         </div>
+
                         <div class="col-12 mt-2">
-                            <div class="form-check">
+                            <div class="form-check form-switch">
                                 <input class="form-check-input" type="checkbox" name="notify_line" id="chkLine" checked>
-                                <label class="form-check-label small" for="chkLine">แจ้งเตือนทาง LINE</label>
+                                <label class="form-check-label small" for="chkLine">ส่งแจ้งเตือนทาง LINE Notify</label>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer py-2 border-top-0 bg-light rounded-bottom-4">
-                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
-                    <button type="submit" class="btn btn-sm btn-primary px-3">บันทึก</button>
+                <div class="modal-footer py-3 border-top bg-light">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="submit" class="btn btn-primary px-4 fw-bold hover-scale shadow-sm">
+                        <i class="bi bi-send-fill me-2"></i> บันทึกข้อมูล
+                    </button>
                 </div>
             </form>
         </div>
@@ -240,7 +309,7 @@ $users_all = $pdo->query("SELECT * FROM users WHERE is_active = 1 ORDER BY fulln
                 <div class="row g-0">
                     <div class="col-md-7 p-3 border-end">
                         <h6 class="fw-bold text-primary small border-bottom pb-1 mb-2">ข้อมูลการแจ้ง</h6>
-                        <p class="fw-bold mb-2" id="v_desc"></p>
+                        <p class="fw-bold mb-2" id="v_desc" style="white-space: pre-wrap;"></p>
 
                         <div class="row small text-muted mb-2">
                             <div class="col-6">หมวดหมู่: <span id="v_cat" class="text-dark"></span></div>
@@ -276,7 +345,7 @@ $users_all = $pdo->query("SELECT * FROM users WHERE is_active = 1 ORDER BY fulln
                         <h6 class="fw-bold text-primary small mb-2">ประวัติการสนทนา</h6>
                         <div id="comment_history" class="border rounded p-2 mb-2 bg-white" style="height: 200px; overflow-y: auto;">
                             </div>
-
+                        
                         <h6 class="fw-bold text-primary small mb-2">ตอบกลับ / บันทึก</h6>
                         <form action="process.php" method="POST">
                             <input type="hidden" name="action" value="comment">
@@ -334,6 +403,18 @@ $users_all = $pdo->query("SELECT * FROM users WHERE is_active = 1 ORDER BY fulln
 <?php require_once '../../includes/footer.php'; ?>
 
 <script>
+    // Preview Image Function
+    function previewImage(input) {
+        if (input.files && input.files[0]) {
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('imgPreview').src = e.target.result;
+                document.getElementById('imgPreview').style.display = 'block';
+            }
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+
     function openAddModal() {
         new bootstrap.Modal(document.getElementById('addModal')).show();
     }
@@ -369,7 +450,6 @@ $users_all = $pdo->query("SELECT * FROM users WHERE is_active = 1 ORDER BY fulln
             document.getElementById('v_img_container').style.display = 'none';
         }
 
-        // ✅ Load Comments
         const historyBox = document.getElementById('comment_history');
         historyBox.innerHTML = '<div class="text-center small text-muted mt-3">Loading...</div>';
         fetch('get_comments.php?ticket_id=' + d.id)
