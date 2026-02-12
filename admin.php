@@ -100,8 +100,13 @@ $low_stock_items = $pdo->query("SELECT name, qty_on_hand, min_stock, unit FROM i
                     <h4 class="fw-bold text-dark m-0">ยินดีต้อนรับ, <?= htmlspecialchars($_SESSION['fullname']) ?>! 👋</h4>
                     <small class="text-muted">นี่คือสรุปสถานะงานไอทีล่าสุดของคุณ</small>
                 </div>
-                <div>
-                    <a href="modules/helpdesk/index.php" class="btn btn-primary btn-sm shadow-sm"><i class="bi bi-plus-lg me-1"></i> แจ้งซ่อม</a>
+                <div class="d-flex gap-2">
+                    <a href="index.php" class="btn btn-outline-secondary btn-sm shadow-sm bg-white" target="_blank">
+                        <i class="bi bi-house-door-fill me-1"></i> ไปที่หน้าหลัก
+                    </a>
+                    <a href="modules/helpdesk/index.php" class="btn btn-primary btn-sm shadow-sm">
+                        <i class="bi bi-plus-lg me-1"></i> แจ้งซ่อม
+                    </a>
                 </div>
             </div>
 
@@ -315,7 +320,7 @@ $low_stock_items = $pdo->query("SELECT name, qty_on_hand, min_stock, unit FROM i
             labels: <?= $cat_labels ?>,
             datasets: [{
                 data: <?= $cat_values ?>,
-                backgroundColor: ['#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b', #858796'],
+                backgroundColor: ['#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b', '#858796'],
                 borderWidth: 2,
                 borderColor: '#fff'
             }]

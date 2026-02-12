@@ -219,25 +219,64 @@ if (!function_exists('validateCSRFToken')) {
 }
 
 
-// ฟังก์ชันส่ง Line Notify (แจ้งเตือนเข้ากลุ่มเจ้าหน้าที่)
-function sendLineNotify($message, $token) {
-    $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, "https://notify-api.line.me/api/notify");
-    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-    curl_setopt($ch, CURLOPT_POST, 1);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, "message=" . $message);
-    $headers = array('Content-type: application/x-www-form-urlencoded', 'Authorization: Bearer ' . $token);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-    $result = curl_exec($ch);
-    curl_close($ch);
-    return $result;
+// --------------------------------------------------------
+// 4. ฟังก์ชันส่งไลน์ (Messaging API - Push Message)
+// ✅ แก้ไข: เพิ่ม Force IPv4 และปิด SSL Verify เพื่อแก้ Connection Error
+// --------------------------------------------------------
+
+// ฟังก์ชันหลักสำหรับส่งข้อความ (ใช้โดยระบบแจ้งซ่อม)
+if (!function_exists('sendLineNotify')) {
+    function sendLineNotify($message)
+    {
+        // 1. ดึงค่าจาก Database
+        $access_token = getSetting('line_channel_token'); 
+        $dest_id = getSetting('line_dest_id');            
+
+        if (empty($access_token) || empty($dest_id)) {
+            return false;
+        }
+
+        // เรียกใช้ฟังก์ชันยิง API ด้านล่าง
+        $result = sendLinePush($dest_id, $message, $access_token);
+        return ($result['status'] == 200);
+    }
 }
 
-// ฟังก์ชันดึง Token จาก Database (ตาราง settings)
-function getSystemSetting($key, $pdo) {
-    $stmt = $pdo->prepare("SELECT setting_value FROM settings WHERE setting_name = ?");
-    $stmt->execute([$key]);
-    return $stmt->fetchColumn();
+// ฟังก์ชันยิง API (ใช้โดยปุ่มทดสอบ และ sendLineNotify)
+if (!function_exists('sendLinePush')) {
+    function sendLinePush($to, $message, $token) {
+        $url = "https://api.line.me/v2/bot/message/push";
+        $headers = [
+            "Content-Type: application/json",
+            "Authorization: Bearer " . $token
+        ];
+        $data = [
+            "to" => $to,
+            "messages" => [
+                ["type" => "text", "text" => $message]
+            ]
+        ];
+
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_POST, 1);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+        
+        // --- ✅ จุดแก้ Error Connection ---
+        curl_setopt($ch, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4); // บังคับใช้ IPv4
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0); // ปิดเช็ค SSL
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0); // ปิดเช็ค SSL
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 15); // เพิ่มเวลารอ
+        curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+        // -------------------------------
+
+        $result = curl_exec($ch);
+        $http_status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $error = curl_error($ch);
+        curl_close($ch);
+
+        return ['status' => $http_status, 'response' => $result, 'error' => $error];
+    }
 }

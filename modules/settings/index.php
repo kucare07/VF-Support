@@ -326,12 +326,40 @@ while ($row = $stmt->fetch()) {
 <script>
     document.getElementById('menu-toggle').addEventListener('click', e => { e.preventDefault(); document.getElementById('sidebar-wrapper').classList.toggle('active'); });
 
-    function testLine() {
-        Swal.fire({
-            title: 'บันทึกก่อนทดสอบ',
-            text: 'กรุณากดปุ่ม "บันทึกการเปลี่ยนแปลง" ก่อนกดทดสอบ เพื่อให้ระบบจำค่าล่าสุด',
-            icon: 'info'
-        });
+  function testLine() {
+        // เปลี่ยนปุ่มให้เป็น Loading
+        const btn = document.querySelector('button[onclick="testLine()"]');
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> กำลังส่ง...';
+
+        fetch('test_line.php')
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'สำเร็จ!',
+                        text: data.message,
+                        confirmButtonColor: '#2563eb'
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'เกิดข้อผิดพลาด',
+                        text: data.message,
+                        footer: '<small class="text-muted">ตรวจสอบ Token และ ID ว่าถูกต้องหรือไม่</small>'
+                    });
+                }
+                // คืนค่าปุ่ม
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            })
+            .catch(error => {
+                Swal.fire('Error', 'ไม่สามารถเชื่อมต่อกับ Server ได้', 'error');
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            });
     }
 </script>
 

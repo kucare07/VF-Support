@@ -97,7 +97,7 @@ $latest_kb = $pdo->query("SELECT k.*, c.name as cat_name FROM kb_articles k LEFT
 
     <nav class="navbar navbar-expand-lg navbar-glass sticky-top py-3">
         <div class="container">
-            <a class="navbar-brand d-flex align-items-center" href="#">
+            <a class="navbar-brand d-flex align-items-center" href="index.php">
                 <div class="bg-primary text-white rounded-3 p-2 me-2 shadow-sm">
                     <i class="bi bi-hdd-network-fill"></i>
                 </div>
@@ -106,20 +106,7 @@ $latest_kb = $pdo->query("SELECT k.*, c.name as cat_name FROM kb_articles k LEFT
                     <small class="text-muted" style="font-size: 0.75rem;">Support Center</small>
                 </div>
             </a>
-            <div class="ms-auto">
-                <?php if (isset($_SESSION['user_id'])): ?>
-                    <a href="admin.php" class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm me-2 btn-sm hover-scale">
-                        <i class="bi bi-speedometer2"></i> Dashboard
-                    </a>
-                    <a href="logout.php" class="btn btn-outline-danger rounded-pill px-3 btn-sm hover-scale" onclick="return confirm('ต้องการออกจากระบบ?');">
-                        <i class="bi bi-power"></i>
-                    </a>
-                <?php else: ?>
-                    <a href="login.php" class="btn btn-outline-primary rounded-pill px-4 fw-bold shadow-sm hover-scale">
-                        <i class="bi bi-shield-lock me-1"></i> เจ้าหน้าที่
-                    </a>
-                <?php endif; ?>
-            </div>
+            
         </div>
     </nav>
 
