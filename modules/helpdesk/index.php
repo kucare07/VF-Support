@@ -35,7 +35,6 @@ $users_all = $pdo->query("SELECT * FROM users WHERE is_active = 1 ORDER BY fulln
 <style>
     :root { --primary-color: #2563eb; }
     
-    /* Gradient Header เหมือนหน้าแรก */
     .header-gradient {
         background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
         color: white;
@@ -44,7 +43,6 @@ $users_all = $pdo->query("SELECT * FROM users WHERE is_active = 1 ORDER BY fulln
         overflow: hidden;
     }
     
-    /* Upload Area */
     .upload-area {
         border: 2px dashed #cbd5e1;
         border-radius: 10px;
@@ -59,7 +57,6 @@ $users_all = $pdo->query("SELECT * FROM users WHERE is_active = 1 ORDER BY fulln
         background: #eff6ff;
     }
     
-    /* Modern Inputs */
     .form-control, .form-select {
         background-color: #f8fafc;
         border: 1px solid #e2e8f0;
@@ -73,7 +70,6 @@ $users_all = $pdo->query("SELECT * FROM users WHERE is_active = 1 ORDER BY fulln
         box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
     }
     
-    /* Button Animation */
     .hover-scale { transition: 0.2s; }
     .hover-scale:hover { transform: scale(1.02); }
     
@@ -84,6 +80,23 @@ $users_all = $pdo->query("SELECT * FROM users WHERE is_active = 1 ORDER BY fulln
         border-radius: 8px;
         box-shadow: 0 4px 10px rgba(0,0,0,0.1);
     }
+
+    /* ✅ แก้ปัญหาตัวอักษรซ้อนทับ */
+    .table td {
+        vertical-align: middle;
+        white-space: nowrap; /* ให้แสดงบรรทัดเดียว */
+    }
+    /* ยกเว้นคอลัมน์รายละเอียด ให้ตัดคำได้ */
+    .text-wrap-fix {
+        white-space: normal !important;
+        min-width: 200px;
+    }
+    /* แก้ใน Modal ให้ตัดคำยาวๆ */
+    #v_desc {
+        word-wrap: break-word;
+        word-break: break-word;
+        white-space: pre-wrap;
+    }
 </style>
 
 <div id="page-content-wrapper">
@@ -93,7 +106,7 @@ $users_all = $pdo->query("SELECT * FROM users WHERE is_active = 1 ORDER BY fulln
     </nav>
 
     <div class="main-content-scroll">
-        <div class="container-fluid p-2"> 
+        <div class="container-fluid p-3"> 
             <?php if (isset($_GET['msg'])): ?>
                 <script>Swal.fire({icon: 'success', title: 'สำเร็จ!', timer: 1500, showConfirmButton: false});</script>
             <?php endif; ?>
@@ -101,7 +114,7 @@ $users_all = $pdo->query("SELECT * FROM users WHERE is_active = 1 ORDER BY fulln
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
                     <h6 class="fw-bold text-primary m-0"><i class="bi bi-list-columns-reverse me-2"></i>รายการแจ้งซ่อม</h6>
-                    <button class="btn btn-primary shadow-sm hover-scale rounded-pill px-4" onclick="openAddModal()">
+                    <button type="button" class="btn btn-primary shadow-sm hover-scale rounded-pill px-4" onclick="openAddModal()">
                         <i class="bi bi-plus-lg me-1"></i> แจ้งปัญหา/งานซ่อม
                     </button>
                 </div>
@@ -124,7 +137,6 @@ $users_all = $pdo->query("SELECT * FROM users WHERE is_active = 1 ORDER BY fulln
                                 <?php foreach ($tickets as $row):
                                     $json = htmlspecialchars(json_encode($row, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP), ENT_QUOTES, 'UTF-8');
                                     
-                                    // SLA Calculation
                                     $is_overdue = false;
                                     $sla_text = '-';
                                     if ($row['sla_due_date']) {
@@ -134,9 +146,12 @@ $users_all = $pdo->query("SELECT * FROM users WHERE is_active = 1 ORDER BY fulln
                                             $is_overdue = true;
                                         }
                                     }
+
+                                    // สร้างรหัส VF-TK-XXX
+                                    $ticketCode = 'VF-TK-' . str_pad($row['id'], 3, '0', STR_PAD_LEFT);
                                 ?>
                                     <tr>
-                                        <td class="ps-3 fw-bold">#<?= str_pad($row['id'], 5, '0', STR_PAD_LEFT) ?></td>
+                                        <td class="ps-3 fw-bold text-primary text-nowrap"><?= $ticketCode ?></td>
                                         <td>
                                             <?php if (isset($row['type']) && $row['type'] == 'request'): ?>
                                                 <span class="badge bg-info text-dark">Req</span>
@@ -144,16 +159,17 @@ $users_all = $pdo->query("SELECT * FROM users WHERE is_active = 1 ORDER BY fulln
                                                 <span class="badge bg-danger">Inc</span>
                                             <?php endif; ?>
                                         </td>
-                                        <td>
-                                            <div class="fw-bold text-truncate text-primary" style="max-width: 200px; cursor:pointer;" onclick="openView('<?= $json ?>')">
+                                        <td class="text-wrap-fix">
+                                            <div class="fw-bold text-dark text-truncate" style="max-width: 250px; cursor:pointer;" onclick="openView('<?= $json ?>')">
                                                 <?= $row['description'] ?>
                                             </div>
-                                            <small class="text-muted"><i class="bi bi-tag"></i> <?= $row['cat_name'] ?>
+                                            <small class="text-muted d-block mt-1">
+                                                <i class="bi bi-tag"></i> <?= $row['cat_name'] ?>
                                                 <span class="badge bg-<?= match ($row['priority']) { 'critical' => 'danger', 'high' => 'warning', default => 'light text-dark border' } ?> ms-1"><?= ucfirst($row['priority']) ?></span>
                                             </small>
                                         </td>
                                         <td>
-                                            <div><?= $row['requester_name'] ?></div>
+                                            <div class="text-truncate" style="max-width: 150px;"><?= $row['requester_name'] ?></div>
                                             <small class="text-muted" style="font-size: 0.75rem;"><?= $row['dept_name'] ?></small>
                                         </td>
                                         <td><?= getStatusBadge($row['status']) ?></td>
@@ -166,13 +182,13 @@ $users_all = $pdo->query("SELECT * FROM users WHERE is_active = 1 ORDER BY fulln
                                                 <span class="text-muted"><?= $sla_text ?></span>
                                             <?php endif; ?>
                                         </td>
-                                        <td class="text-end pe-3">
+                                        <td class="text-end pe-3 text-nowrap">
                                             <button class="btn btn-sm btn-light border text-info py-0 me-1 shadow-sm" onclick="openView('<?= $json ?>')" title="ดูรายละเอียด"><i class="bi bi-eye"></i></button>
                                             
                                             <?php if ($_SESSION['role'] != 'user'): ?>
                                                 <button class="btn btn-sm btn-light border text-warning py-0 me-1 shadow-sm" onclick="openEdit('<?= $json ?>')" title="แก้ไขสถานะ"><i class="bi bi-pencil"></i></button>
                                                 <button class="btn btn-sm btn-light border text-danger py-0 shadow-sm" 
-                                                    onclick="confirmDelete('process.php?action=delete&id=<?= $row['id'] ?>', 'ยืนยันลบ Ticket #<?= str_pad($row['id'], 5, '0', STR_PAD_LEFT) ?>?')">
+                                                    onclick="confirmDelete('process.php?action=delete&id=<?= $row['id'] ?>', 'ยืนยันลบ Ticket <?= $ticketCode ?>?')">
                                                     <i class="bi bi-trash"></i>
                                                 </button>
                                             <?php endif; ?>
@@ -188,10 +204,10 @@ $users_all = $pdo->query("SELECT * FROM users WHERE is_active = 1 ORDER BY fulln
     </div>
 </div>
 
-<div class="modal fade" id="addModal" tabindex="-1">
+<div class="modal fade" id="addModal" tabindex="-1" aria-labelledby="addModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content rounded-4 border-0 shadow overflow-hidden">
-            <form action="process.php" method="POST" enctype="multipart/form-data">
+            <form action="process.php" method="POST" enctype="multipart/form-data" id="addForm">
                 <input type="hidden" name="action" value="add">
                 <input type="hidden" name="csrf_token" value="<?= generateCSRFToken() ?>">
 
@@ -206,7 +222,6 @@ $users_all = $pdo->query("SELECT * FROM users WHERE is_active = 1 ORDER BY fulln
                 </div>
 
                 <div class="modal-body p-4 bg-white">
-                    
                     <h6 class="text-primary fw-bold small mb-3 border-bottom pb-2"><i class="bi bi-person-badge me-1"></i> ข้อมูลผู้แจ้ง</h6>
                     
                     <div class="row g-3 mb-4">
@@ -297,7 +312,7 @@ $users_all = $pdo->query("SELECT * FROM users WHERE is_active = 1 ORDER BY fulln
     <div class="modal-dialog modal-lg">
         <div class="modal-content rounded-4 border-0 shadow">
             <div class="modal-header bg-info text-white py-2 rounded-top-4">
-                <h6 class="modal-title fw-bold">รายละเอียด #<span id="v_id_text"></span></h6>
+                <h6 class="modal-title fw-bold">รายละเอียด <span id="v_id_text"></span></h6>
                 <button type="button" class="btn-close btn-close-white btn-sm" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-0">
@@ -309,7 +324,7 @@ $users_all = $pdo->query("SELECT * FROM users WHERE is_active = 1 ORDER BY fulln
                 <div class="row g-0">
                     <div class="col-md-7 p-3 border-end">
                         <h6 class="fw-bold text-primary small border-bottom pb-1 mb-2">ข้อมูลการแจ้ง</h6>
-                        <p class="fw-bold mb-2" id="v_desc" style="white-space: pre-wrap;"></p>
+                        <p class="fw-bold mb-2" id="v_desc"></p>
 
                         <div class="row small text-muted mb-2">
                             <div class="col-6">หมวดหมู่: <span id="v_cat" class="text-dark"></span></div>
@@ -344,7 +359,7 @@ $users_all = $pdo->query("SELECT * FROM users WHERE is_active = 1 ORDER BY fulln
 
                         <h6 class="fw-bold text-primary small mb-2">ประวัติการสนทนา</h6>
                         <div id="comment_history" class="border rounded p-2 mb-2 bg-white" style="height: 200px; overflow-y: auto;">
-                            </div>
+                        </div>
                         
                         <h6 class="fw-bold text-primary small mb-2">ตอบกลับ / บันทึก</h6>
                         <form action="process.php" method="POST">
@@ -403,7 +418,14 @@ $users_all = $pdo->query("SELECT * FROM users WHERE is_active = 1 ORDER BY fulln
 <?php require_once '../../includes/footer.php'; ?>
 
 <script>
-    // Preview Image Function
+    var addModal, editModal, viewModal;
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        addModal = new bootstrap.Modal(document.getElementById('addModal'));
+        editModal = new bootstrap.Modal(document.getElementById('editModal'));
+        viewModal = new bootstrap.Modal(document.getElementById('viewModal'));
+    });
+
     function previewImage(input) {
         if (input.files && input.files[0]) {
             var reader = new FileReader();
@@ -416,7 +438,9 @@ $users_all = $pdo->query("SELECT * FROM users WHERE is_active = 1 ORDER BY fulln
     }
 
     function openAddModal() {
-        new bootstrap.Modal(document.getElementById('addModal')).show();
+        document.getElementById('addForm').reset();
+        document.getElementById('imgPreview').style.display = 'none';
+        addModal.show();
     }
 
     function openEdit(json) {
@@ -424,12 +448,14 @@ $users_all = $pdo->query("SELECT * FROM users WHERE is_active = 1 ORDER BY fulln
         document.getElementById('e_id').value = d.id;
         document.getElementById('e_status').value = d.status;
         document.getElementById('e_tech').value = d.assigned_to;
-        new bootstrap.Modal(document.getElementById('editModal')).show();
+        editModal.show();
     }
 
     function openView(json) {
         const d = JSON.parse(json);
-        document.getElementById('v_id_text').innerText = d.id.toString().padStart(5, '0');
+        const ticketId = 'VF-TK-' + d.id.toString().padStart(3, '0');
+        
+        document.getElementById('v_id_text').innerText = ticketId;
         document.getElementById('v_status_badge').innerHTML = `<span class="badge bg-secondary">${d.status.toUpperCase()}</span>`;
         document.getElementById('v_desc').innerText = d.description;
         document.getElementById('v_cat').innerText = d.cat_name || '-';
@@ -459,6 +485,6 @@ $users_all = $pdo->query("SELECT * FROM users WHERE is_active = 1 ORDER BY fulln
                 historyBox.scrollTop = historyBox.scrollHeight;
             });
 
-        new bootstrap.Modal(document.getElementById('viewModal')).show();
+        viewModal.show();
     }
 </script>
