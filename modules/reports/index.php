@@ -1,260 +1,215 @@
 <?php
 require_once '../../includes/auth.php';
 require_once '../../config/db_connect.php';
-require_once '../../includes/functions.php';
 
-// --- 1. รับค่าตัวกรอง (Input Handling) ---
-// กำหนดค่าเริ่มต้นเป็นวันแรกและวันสุดท้ายของเดือนปัจจุบัน
-$start_date = isset($_GET['start_date']) && !empty($_GET['start_date']) ? $_GET['start_date'] : date('Y-m-01');
-$end_date   = isset($_GET['end_date']) && !empty($_GET['end_date']) ? $_GET['end_date'] : date('Y-m-t');
-$report_type = isset($_GET['type']) ? $_GET['type'] : 'tickets';
-
-$results = [];
-$title = "";
-$headers = [];
-$error_msg = "";
-
-try {
-    // --- 2. Logic การดึงข้อมูล (Query) ---
-    
-    if ($report_type == 'tickets') {
-        $title = "รายงานการแจ้งซ่อม (Helpdesk)";
-        // กำหนดหัวตาราง
-        $headers = [
-            "Job ID", "วันที่แจ้ง", "ผู้แจ้ง", "หมวดหมู่", "รายละเอียด", "สถานะ", "ผู้รับผิดชอบ"
-        ];
-        
-        // ใช้ Prepared Statement เพื่อความปลอดภัย
-        $sql = "SELECT t.*, u.fullname, c.name as cat_name, a.name as asset_name, tech.fullname as tech_name
-                FROM tickets t 
-                LEFT JOIN users u ON t.user_id = u.id 
-                LEFT JOIN categories c ON t.category_id = c.id
-                LEFT JOIN assets a ON t.asset_code = a.asset_code
-                LEFT JOIN users tech ON t.assigned_to = tech.id
-                WHERE DATE(t.created_at) BETWEEN ? AND ? 
-                ORDER BY t.created_at DESC";
-        
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute([$start_date, $end_date]);
-        $results = $stmt->fetchAll();
-
-    } elseif ($report_type == 'borrow') {
-        $title = "รายงานประวัติการยืม-คืน";
-        $headers = [
-            "เลขที่", "วันที่ยืม", "ผู้ยืม", "อุปกรณ์", "รหัสทรัพย์สิน", "กำหนดคืน", "สถานะ"
-        ];
-
-        $sql = "SELECT b.*, u.fullname as user_name, a.asset_code, a.name as asset_name 
-                FROM borrow_transactions b 
-                LEFT JOIN users u ON b.user_id = u.id 
-                LEFT JOIN assets a ON b.asset_id = a.id
-                WHERE DATE(b.borrow_date) BETWEEN ? AND ? 
-                ORDER BY b.borrow_date DESC";
-        
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute([$start_date, $end_date]);
-        $results = $stmt->fetchAll();
-
-    } elseif ($report_type == 'assets') {
-        $title = "รายงานทะเบียนทรัพย์สิน (ทั้งหมด)";
-        $headers = [
-            "รหัส", "ชื่อเครื่อง/รุ่น", "ประเภท", "Serial No.", "สถานที่", "ผู้ถือครอง", "สถานะ"
-        ];
-
-        // Asset ดูข้อมูลปัจจุบัน (ไม่ต้องกรองวันที่)
-        $sql = "SELECT a.*, t.name as type_name, l.name as loc_name, u.fullname as owner 
-                FROM assets a 
-                LEFT JOIN asset_types t ON a.asset_type_id = t.id
-                LEFT JOIN locations l ON a.location_id = l.id
-                LEFT JOIN users u ON a.current_user_id = u.id
-                ORDER BY a.asset_code ASC";
-        
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute(); // ไม่ต้องส่ง parameter
-        $results = $stmt->fetchAll();
-    }
-
-} catch (PDOException $e) {
-    $error_msg = "เกิดข้อผิดพลาดในการดึงข้อมูล: " . $e->getMessage();
-}
+// (Optional) เตรียมข้อมูลสำหรับ Dropdown ในอนาคตถ้าต้องการ
 ?>
 
 <?php require_once '../../includes/header.php'; ?>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <?php require_once '../../includes/sidebar.php'; ?>
 
 <style>
-    @media print {
-        #sidebar-wrapper, .main-navbar, .no-print { display: none !important; }
-        .main-content-scroll { margin: 0; padding: 0; height: auto; overflow: visible; }
-        .card { border: none !important; shadow: none !important; }
-        table { width: 100%; border-collapse: collapse; font-size: 12px; }
-        th, td { border: 1px solid #000 !important; padding: 5px; }
-        body { background: white; -webkit-print-color-adjust: exact; }
+    .report-card {
+        transition: transform 0.2s;
+        height: 100%;
+        border: none;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    }
+    .report-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 15px rgba(0,0,0,0.1);
+    }
+    .report-icon {
+        font-size: 2.5rem;
+        opacity: 0.2;
+        position: absolute;
+        right: 15px;
+        top: 15px;
     }
 </style>
 
 <div id="page-content-wrapper">
     <nav class="main-navbar">
-        <span class="fw-bold text-dark">Reports System</span>
-        <span class="text-muted ms-2 small border-start ps-2">ระบบรายงาน</span>
+        <span class="fw-bold text-dark">Report Center</span>
+        <span class="text-muted ms-2 small border-start ps-2">ศูนย์รวมรายงานและการส่งออกข้อมูล</span>
     </nav>
 
     <div class="main-content-scroll">
-        <div class="container-fluid p-2">
+        <div class="container-fluid p-4"> 
             
-            <?php if ($error_msg): ?>
-                <div class="alert alert-danger"><?= $error_msg ?></div>
-            <?php endif; ?>
-
-            <div class="card border-0 shadow-sm mb-3 no-print">
-                <div class="card-header bg-white py-2">
-                    <h6 class="m-0 fw-bold text-primary"><i class="bi bi-funnel me-2"></i>ตัวกรองรายงาน</h6>
-                </div>
-                <div class="card-body p-3">
-                    <form method="GET" class="row g-2 align-items-end">
-                        <div class="col-md-3">
-                            <label class="form-label small fw-bold mb-1">ประเภทรายงาน</label>
-                            <select name="type" class="form-select form-select-sm" onchange="this.form.submit()">
-                                <option value="tickets" <?= $report_type=='tickets'?'selected':'' ?>>แจ้งซ่อม (Tickets)</option>
-                                <option value="borrow" <?= $report_type=='borrow'?'selected':'' ?>>การยืม-คืน (Borrow)</option>
-                                <option value="assets" <?= $report_type=='assets'?'selected':'' ?>>ทรัพย์สิน (Assets List)</option>
-                            </select>
+            <div class="row g-4">
+                
+                <div class="col-md-6 col-lg-4">
+                    <div class="card report-card">
+                        <div class="header-gradient rounded-top">
+                            <h6 class="m-0 fw-bold"><i class="bi bi-ticket-perforated me-2"></i>รายงานการแจ้งซ่อม</h6>
                         </div>
-                        
-                        <?php if($report_type != 'assets'): ?>
-                        <div class="col-md-3">
-                            <label class="form-label small fw-bold mb-1">ตั้งแต่วันที่</label>
-                            <input type="date" name="start_date" class="form-control form-control-sm" value="<?= $start_date ?>">
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label small fw-bold mb-1">ถึงวันที่</label>
-                            <input type="date" name="end_date" class="form-control form-control-sm" value="<?= $end_date ?>">
-                        </div>
-                        <?php endif; ?>
-                        
-                        <div class="col-md-2">
-                            <button type="submit" class="btn btn-primary btn-sm w-100">
-                                <i class="bi bi-search me-1"></i> ค้นหา
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
-            <div class="card border-0 shadow-sm">
-                <div class="card-body p-3">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h5 class="fw-bold text-dark m-0"><?= $title ?></h5>
-                        <div class="no-print">
-                            <button onclick="window.print()" class="btn btn-outline-secondary btn-sm">
-                                <i class="bi bi-printer me-1"></i> พิมพ์ / PDF
-                            </button>
-                            <button onclick="exportTableToExcel('reportTable', '<?= $report_type ?>_report')" class="btn btn-success btn-sm">
-                                <i class="bi bi-file-earmark-excel me-1"></i> Export Excel
-                            </button>
+                        <div class="card-body">
+                            <i class="bi bi-tools report-icon text-primary"></i>
+                            <p class="small text-muted mb-3">Export ข้อมูลรายการแจ้งซ่อม, สถานะงาน, และ SLA</p>
+                            
+                            <form action="export_ticket.php" method="GET" target="_blank">
+                                <div class="mb-2">
+                                    <label class="form-label small fw-bold">ช่วงวันที่แจ้ง</label>
+                                    <div class="input-group input-group-sm">
+                                        <input type="date" name="start_date" class="form-control" value="<?= date('Y-m-01') ?>" required>
+                                        <span class="input-group-text bg-light">ถึง</span>
+                                        <input type="date" name="end_date" class="form-control" value="<?= date('Y-m-d') ?>" required>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label small fw-bold">สถานะงาน</label>
+                                    <select name="status" class="form-select form-select-sm">
+                                        <option value="">ทั้งหมด (All)</option>
+                                        <option value="resolved">เสร็จสิ้น (Resolved)</option>
+                                        <option value="pending">รอดำเนินการ (Pending)</option>
+                                    </select>
+                                </div>
+                                <button type="submit" class="btn btn-primary btn-sm w-100 hover-scale">
+                                    <i class="bi bi-file-earmark-excel me-1"></i> Export Excel
+                                </button>
+                            </form>
                         </div>
                     </div>
-                    
-                    <?php if($report_type != 'assets'): ?>
-                        <p class="small text-muted mb-2">
-                            ข้อมูลระหว่างวันที่: <strong><?= date('d/m/Y', strtotime($start_date)) ?></strong> 
-                            ถึง <strong><?= date('d/m/Y', strtotime($end_date)) ?></strong>
-                        </p>
-                    <?php else: ?>
-                        <p class="small text-muted mb-2">ข้อมูลทรัพย์สินทั้งหมด ณ วันที่: <strong><?= date('d/m/Y') ?></strong></p>
-                    <?php endif; ?>
+                </div>
 
-                    <div class="table-responsive">
-                        <table class="table table-bordered table-hover table-sm small mb-0" id="reportTable">
-                            <thead class="table-light">
-                                <tr>
-                                    <?php foreach($headers as $h): ?>
-                                        <th class="text-nowrap"><?= $h ?></th>
-                                    <?php endforeach; ?>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php if(count($results) > 0): ?>
-                                    <?php foreach($results as $row): ?>
-                                        <tr>
-                                            <?php if($report_type == 'tickets'): ?>
-                                                <td class="text-center">#<?= $row['id'] ?></td>
-                                                <td><?= date('d/m/Y H:i', strtotime($row['created_at'])) ?></td>
-                                                <td><?= $row['fullname'] ?></td>
-                                                <td><?= $row['cat_name'] ?></td>
-                                                <td><?= $row['description'] ?></td>
-                                                <td>
-                                                    <span class="badge bg-<?= match($row['status']){'new'=>'danger','resolved'=>'success',default=>'secondary'} ?> no-print">
-                                                        <?= ucfirst($row['status']) ?>
-                                                    </span>
-                                                    <span class="d-none d-print-inline"><?= ucfirst($row['status']) ?></span>
-                                                </td>
-                                                <td><?= $row['tech_name'] ?: '-' ?></td>
-
-                                            <?php elseif($report_type == 'borrow'): ?>
-                                                <td><?= $row['transaction_no'] ?></td>
-                                                <td><?= date('d/m/Y', strtotime($row['borrow_date'])) ?></td>
-                                                <td><?= $row['user_name'] ?></td>
-                                                <td><?= $row['asset_name'] ?></td>
-                                                <td><?= $row['asset_code'] ?></td>
-                                                <td><?= $row['return_due_date'] ? date('d/m/Y', strtotime($row['return_due_date'])) : '-' ?></td>
-                                                <td>
-                                                    <span class="badge bg-<?= $row['status']=='returned'?'success':'warning text-dark' ?> no-print">
-                                                        <?= $row['status']=='returned' ? 'คืนแล้ว' : 'กำลังยืม' ?>
-                                                    </span>
-                                                    <span class="d-none d-print-inline"><?= $row['status'] ?></span>
-                                                </td>
-
-                                            <?php elseif($report_type == 'assets'): ?>
-                                                <td class="fw-bold"><?= $row['asset_code'] ?></td>
-                                                <td><?= $row['name'] ?> <br><small class="text-muted"><?= $row['brand'] ?> <?= $row['model'] ?></small></td>
-                                                <td><?= $row['type_name'] ?></td>
-                                                <td><?= $row['serial_number'] ?></td>
-                                                <td><?= $row['loc_name'] ?></td>
-                                                <td><?= $row['owner'] ?: '-' ?></td>
-                                                <td><?= ucfirst($row['status']) ?></td>
-                                            <?php endif; ?>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                <?php else: ?>
-                                    <tr>
-                                        <td colspan="<?= count($headers) ?>" class="text-center py-4 text-muted">
-                                            ไม่พบข้อมูลตามเงื่อนไข
-                                        </td>
-                                    </tr>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
+                <div class="col-md-6 col-lg-4">
+                    <div class="card report-card">
+                        <div class="header-gradient rounded-top">
+                            <h6 class="m-0 fw-bold"><i class="bi bi-pc-display me-2"></i>ทะเบียนทรัพย์สิน</h6>
+                        </div>
+                        <div class="card-body">
+                            <i class="bi bi-box-seam report-icon text-success"></i>
+                            <p class="small text-muted mb-3">Export รายการครุภัณฑ์, อุปกรณ์ไอที, และสถานะปัจจุบัน</p>
+                            
+                            <form action="../asset/export_assets.php" method="GET" target="_blank">
+                                <div class="mb-2">
+                                    <label class="form-label small fw-bold">ประเภททรัพย์สิน</label>
+                                    <select name="type_id" class="form-select form-select-sm">
+                                        <option value="">ทั้งหมด (All)</option>
+                                        </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label small fw-bold">สถานะ</label>
+                                    <select name="status" class="form-select form-select-sm">
+                                        <option value="">ทั้งหมด (All)</option>
+                                        <option value="active">ใช้งานอยู่ (Active)</option>
+                                        <option value="spare">สำรอง (Spare)</option>
+                                        <option value="repair">ส่งซ่อม (Repair)</option>
+                                        <option value="write_off">ตัดจำหน่าย (Write-off)</option>
+                                    </select>
+                                </div>
+                                <button type="submit" class="btn btn-success btn-sm w-100 hover-scale">
+                                    <i class="bi bi-file-earmark-spreadsheet me-1"></i> Export Asset List
+                                </button>
+                            </form>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-        </div>
+                <div class="col-md-6 col-lg-4">
+                    <div class="card report-card">
+                        <div class="header-gradient rounded-top">
+                            <h6 class="m-0 fw-bold"><i class="bi bi-arrow-left-right me-2"></i>ประวัติการยืม-คืน</h6>
+                        </div>
+                        <div class="card-body">
+                            <i class="bi bi-journal-text report-icon text-warning"></i>
+                            <p class="small text-muted mb-3">สรุปรายการเบิกยืมอุปกรณ์, การคืน, และรายการค้างส่ง</p>
+                            
+                            <form action="export_borrow.php" method="GET" target="_blank">
+                                <div class="mb-2">
+                                    <label class="form-label small fw-bold">วันที่ทำรายการ</label>
+                                    <div class="input-group input-group-sm">
+                                        <input type="date" name="start_date" class="form-control" value="<?= date('Y-m-01') ?>">
+                                        <span class="input-group-text bg-light">ถึง</span>
+                                        <input type="date" name="end_date" class="form-control" value="<?= date('Y-m-d') ?>">
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label small fw-bold">ประเภทรายการ</label>
+                                    <select name="status" class="form-select form-select-sm">
+                                        <option value="">ทั้งหมด (All)</option>
+                                        <option value="borrowed">กำลังยืม (Borrowed)</option>
+                                        <option value="returned">คืนแล้ว (Returned)</option>
+                                        <option value="overdue">เกินกำหนด (Overdue)</option>
+                                    </select>
+                                </div>
+                                <button type="submit" class="btn btn-warning btn-sm w-100 hover-scale text-dark">
+                                    <i class="bi bi-file-text me-1"></i> Export History
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6 col-lg-4">
+                    <div class="card report-card">
+                        <div class="header-gradient rounded-top">
+                            <h6 class="m-0 fw-bold"><i class="bi bi-calendar-check me-2"></i>แผนบำรุงรักษา (PM)</h6>
+                        </div>
+                        <div class="card-body">
+                            <i class="bi bi-clipboard-pulse report-icon text-info"></i>
+                            <p class="small text-muted mb-3">รายงานแผนการดูแลรักษาประจำเดือน/ปี</p>
+                            
+                            <form action="export_pm.php" method="GET" target="_blank">
+                                <div class="mb-3">
+                                    <label class="form-label small fw-bold">เลือกช่วงเวลา</label>
+                                    <div class="input-group input-group-sm">
+                                        <input type="month" name="pm_month" class="form-control" value="<?= date('Y-m') ?>">
+                                    </div>
+                                </div>
+                                <div class="d-grid gap-2">
+                                    <button type="submit" name="type" value="plan" class="btn btn-info btn-sm hover-scale text-white">
+                                        <i class="bi bi-calendar3 me-1"></i> Export PM Plan
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6 col-lg-4">
+                    <div class="card report-card">
+                        <div class="header-gradient rounded-top">
+                            <h6 class="m-0 fw-bold"><i class="bi bi-box-seam me-2"></i>วัสดุสิ้นเปลือง</h6>
+                        </div>
+                        <div class="card-body">
+                            <i class="bi bi-boxes report-icon text-danger"></i>
+                            <p class="small text-muted mb-3">สรุปยอดคงเหลือ และประวัติการรับเข้า/เบิกออก</p>
+                            
+                            <form action="export_inventory.php" method="GET" target="_blank">
+                                <div class="mb-3">
+                                    <label class="form-label small fw-bold">ประเภทรายงาน</label>
+                                    <select name="report_type" class="form-select form-select-sm">
+                                        <option value="balance">ยอดคงเหลือปัจจุบัน (Stock Balance)</option>
+                                        <option value="movement">ประวัติการเคลื่อนไหว (Stock Card)</option>
+                                        <option value="low_stock">สินค้าใกล้หมด (Low Stock)</option>
+                                    </select>
+                                </div>
+                                <button type="submit" class="btn btn-danger btn-sm w-100 hover-scale">
+                                    <i class="bi bi-file-earmark-arrow-down me-1"></i> Download Report
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6 col-lg-4">
+                    <div class="card report-card bg-dark text-white" style="background: linear-gradient(45deg, #212529, #343a40);">
+                        <div class="card-body d-flex flex-column justify-content-center align-items-center text-center py-5">
+                            <i class="bi bi-bar-chart-line-fill fs-1 mb-3 text-warning"></i>
+                            <h5 class="fw-bold">Executive Dashboard</h5>
+                            <p class="small opacity-75 mb-4">สรุปภาพรวมสถิติ กราฟ และตัวชี้วัดประสิทธิภาพ (KPI)</p>
+                            <a href="executive.php" class="btn btn-warning btn-sm px-4 rounded-pill fw-bold hover-scale text-dark">
+                                <i class="bi bi-eye me-1"></i> เข้าดู Dashboard
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+            </div> </div>
     </div>
 </div>
 
 <?php require_once '../../includes/footer.php'; ?>
-
-<script>
-    // ฟังก์ชัน Export Excel แบบ Client-side (ใช้งานง่าย ไม่ต้องติดตั้งเพิ่ม)
-    function exportTableToExcel(tableID, filename = '') {
-        var downloadLink;
-        var dataType = 'application/vnd.ms-excel';
-        var tableSelect = document.getElementById(tableID);
-        var tableHTML = tableSelect.outerHTML.replace(/ /g, '%20');
-        
-        filename = filename ? filename + '.xls' : 'report_data.xls';
-        
-        downloadLink = document.createElement("a");
-        document.body.appendChild(downloadLink);
-        
-        if(navigator.msSaveOrOpenBlob){
-            var blob = new Blob(['\ufeff', tableHTML], { type: dataType });
-            navigator.msSaveOrOpenBlob( blob, filename);
-        }else{
-            downloadLink.href = 'data:' + dataType + ', ' + tableHTML;
-            downloadLink.download = filename;
-            downloadLink.click();
-        }
-    }
-</script>

@@ -3,7 +3,12 @@ require_once '../../includes/auth.php';
 require_once '../../config/db_connect.php';
 require_once '../../includes/functions.php';
 
-// --- Filter Logic (Secure) ---
+// --- 1. Filter / Search Logic ---
+// สามารถเพิ่มเงื่อนไขการค้นหาตรงนี้ได้ในอนาคต
+$where_clauses = [];
+$params = [];
+
+// --- 2. Query Data ---
 $sql = "SELECT t.*, 
         u.fullname as requester_name, u.email as req_email, u.phone as req_phone,
         d.name as dept_name,
@@ -23,6 +28,7 @@ $stmt = $pdo->prepare($sql);
 $stmt->execute();
 $tickets = $stmt->fetchAll();
 
+// --- 3. Dropdown Data ---
 $categories = $pdo->query("SELECT * FROM categories")->fetchAll();
 $technicians = $pdo->query("SELECT * FROM users WHERE role IN ('technician', 'admin')")->fetchAll();
 $users_all = $pdo->query("SELECT * FROM users WHERE is_active = 1 ORDER BY fullname ASC")->fetchAll();
@@ -32,73 +38,6 @@ $users_all = $pdo->query("SELECT * FROM users WHERE is_active = 1 ORDER BY fulln
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <?php require_once '../../includes/sidebar.php'; ?>
 
-<style>
-    :root { --primary-color: #2563eb; }
-    
-    .header-gradient {
-        background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
-        color: white;
-        padding: 20px 25px;
-        position: relative;
-        overflow: hidden;
-    }
-    
-    .upload-area {
-        border: 2px dashed #cbd5e1;
-        border-radius: 10px;
-        padding: 20px;
-        text-align: center;
-        cursor: pointer;
-        transition: 0.2s;
-        background: #f8fafc;
-    }
-    .upload-area:hover {
-        border-color: var(--primary-color);
-        background: #eff6ff;
-    }
-    
-    .form-control, .form-select {
-        background-color: #f8fafc;
-        border: 1px solid #e2e8f0;
-        border-radius: 10px;
-        padding: 10px 15px;
-        font-size: 0.9rem;
-    }
-    .form-control:focus, .form-select:focus {
-        background-color: #fff;
-        border-color: var(--primary-color);
-        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-    }
-    
-    .hover-scale { transition: 0.2s; }
-    .hover-scale:hover { transform: scale(1.02); }
-    
-    .preview-img {
-        max-height: 150px;
-        display: none;
-        margin-top: 10px;
-        border-radius: 8px;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-    }
-
-    /* ✅ แก้ปัญหาตัวอักษรซ้อนทับ */
-    .table td {
-        vertical-align: middle;
-        white-space: nowrap; /* ให้แสดงบรรทัดเดียว */
-    }
-    /* ยกเว้นคอลัมน์รายละเอียด ให้ตัดคำได้ */
-    .text-wrap-fix {
-        white-space: normal !important;
-        min-width: 200px;
-    }
-    /* แก้ใน Modal ให้ตัดคำยาวๆ */
-    #v_desc {
-        word-wrap: break-word;
-        word-break: break-word;
-        white-space: pre-wrap;
-    }
-</style>
-
 <div id="page-content-wrapper">
     <nav class="main-navbar">
         <span class="fw-bold text-dark">Helpdesk (Tickets)</span>
@@ -107,13 +46,21 @@ $users_all = $pdo->query("SELECT * FROM users WHERE is_active = 1 ORDER BY fulln
 
     <div class="main-content-scroll">
         <div class="container-fluid p-3"> 
+            
             <?php if (isset($_GET['msg'])): ?>
-                <script>Swal.fire({icon: 'success', title: 'สำเร็จ!', timer: 1500, showConfirmButton: false});</script>
+                <script>Swal.fire({icon: 'success', title: 'สำเร็จ!', text: 'บันทึกข้อมูลเรียบร้อยแล้ว', timer: 1500, showConfirmButton: false});</script>
             <?php endif; ?>
 
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-                    <h6 class="fw-bold text-primary m-0"><i class="bi bi-list-columns-reverse me-2"></i>รายการแจ้งซ่อม</h6>
+                    <div class="d-flex align-items-center gap-2">
+                        <h6 class="fw-bold text-primary m-0"><i class="bi bi-list-columns-reverse me-2"></i>รายการแจ้งซ่อม</h6>
+                        
+                        <button id="bulkActionBtn" class="btn btn-danger btn-sm shadow-sm animate__animated animate__fadeIn" style="display:none;" onclick="deleteSelected('process.php?action=bulk_delete')">
+                            <i class="bi bi-trash"></i> ลบที่เลือก
+                        </button>
+                    </div>
+                    
                     <button type="button" class="btn btn-primary shadow-sm hover-scale rounded-pill px-4" onclick="openAddModal()">
                         <i class="bi bi-plus-lg me-1"></i> แจ้งปัญหา/งานซ่อม
                     </button>
@@ -121,9 +68,12 @@ $users_all = $pdo->query("SELECT * FROM users WHERE is_active = 1 ORDER BY fulln
 
                 <div class="card-body p-0">
                     <div class="table-responsive">
-                        <table class="table table-hover table-sm align-middle mb-0 datatable" style="font-size: 0.85rem;">
+                        <table class="table table-hover table-sm align-middle mb-0 datatable">
                             <thead class="table-light">
                                 <tr>
+                                    <th class="w-checkbox py-3 text-center">
+                                        <input type="checkbox" class="form-check-input" id="checkAll" onclick="toggleAll(this)">
+                                    </th>
                                     <th class="ps-3">รหัส (ID)</th>
                                     <th>ประเภท</th>
                                     <th>ปัญหา/อาการ</th>
@@ -135,8 +85,10 @@ $users_all = $pdo->query("SELECT * FROM users WHERE is_active = 1 ORDER BY fulln
                             </thead>
                             <tbody>
                                 <?php foreach ($tickets as $row):
+                                    // เตรียม JSON สำหรับส่งเข้า JS
                                     $json = htmlspecialchars(json_encode($row, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP), ENT_QUOTES, 'UTF-8');
                                     
+                                    // คำนวณ SLA
                                     $is_overdue = false;
                                     $sla_text = '-';
                                     if ($row['sla_due_date']) {
@@ -151,7 +103,12 @@ $users_all = $pdo->query("SELECT * FROM users WHERE is_active = 1 ORDER BY fulln
                                     $ticketCode = 'VF-TK-' . str_pad($row['id'], 3, '0', STR_PAD_LEFT);
                                 ?>
                                     <tr>
+                                        <td class="text-center">
+                                            <input type="checkbox" class="form-check-input row-checkbox" value="<?= $row['id'] ?>" onclick="checkRow()">
+                                        </td>
+                                        
                                         <td class="ps-3 fw-bold text-primary text-nowrap"><?= $ticketCode ?></td>
+                                        
                                         <td>
                                             <?php if (isset($row['type']) && $row['type'] == 'request'): ?>
                                                 <span class="badge bg-info text-dark">Req</span>
@@ -159,6 +116,7 @@ $users_all = $pdo->query("SELECT * FROM users WHERE is_active = 1 ORDER BY fulln
                                                 <span class="badge bg-danger">Inc</span>
                                             <?php endif; ?>
                                         </td>
+                                        
                                         <td class="text-wrap-fix">
                                             <div class="fw-bold text-dark text-truncate" style="max-width: 250px; cursor:pointer;" onclick="openView('<?= $json ?>')">
                                                 <?= $row['description'] ?>
@@ -168,11 +126,14 @@ $users_all = $pdo->query("SELECT * FROM users WHERE is_active = 1 ORDER BY fulln
                                                 <span class="badge bg-<?= match ($row['priority']) { 'critical' => 'danger', 'high' => 'warning', default => 'light text-dark border' } ?> ms-1"><?= ucfirst($row['priority']) ?></span>
                                             </small>
                                         </td>
+                                        
                                         <td>
                                             <div class="text-truncate" style="max-width: 150px;"><?= $row['requester_name'] ?></div>
                                             <small class="text-muted" style="font-size: 0.75rem;"><?= $row['dept_name'] ?></small>
                                         </td>
+                                        
                                         <td><?= getStatusBadge($row['status']) ?></td>
+                                        
                                         <td>
                                             <?php if ($is_overdue): ?>
                                                 <span class="text-danger fw-bold" title="เกินกำหนด!"><i class="bi bi-fire"></i> <?= $sla_text ?></span>
@@ -182,6 +143,7 @@ $users_all = $pdo->query("SELECT * FROM users WHERE is_active = 1 ORDER BY fulln
                                                 <span class="text-muted"><?= $sla_text ?></span>
                                             <?php endif; ?>
                                         </td>
+                                        
                                         <td class="text-end pe-3 text-nowrap">
                                             <button class="btn btn-sm btn-light border text-info py-0 me-1 shadow-sm" onclick="openView('<?= $json ?>')" title="ดูรายละเอียด"><i class="bi bi-eye"></i></button>
                                             
@@ -311,7 +273,7 @@ $users_all = $pdo->query("SELECT * FROM users WHERE is_active = 1 ORDER BY fulln
 <div class="modal fade" id="viewModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content rounded-4 border-0 shadow">
-            <div class="modal-header bg-info text-white py-2 rounded-top-4">
+            <div class="modal-header bg-info text-white py-2 rounded-top-4 header-gradient">
                 <h6 class="modal-title fw-bold">รายละเอียด <span id="v_id_text"></span></h6>
                 <button type="button" class="btn-close btn-close-white btn-sm" data-bs-dismiss="modal"></button>
             </div>
@@ -324,7 +286,7 @@ $users_all = $pdo->query("SELECT * FROM users WHERE is_active = 1 ORDER BY fulln
                 <div class="row g-0">
                     <div class="col-md-7 p-3 border-end">
                         <h6 class="fw-bold text-primary small border-bottom pb-1 mb-2">ข้อมูลการแจ้ง</h6>
-                        <p class="fw-bold mb-2" id="v_desc"></p>
+                        <p class="fw-bold mb-2" id="v_desc" style="white-space: pre-wrap; word-wrap: break-word;"></p>
 
                         <div class="row small text-muted mb-2">
                             <div class="col-6">หมวดหมู่: <span id="v_cat" class="text-dark"></span></div>
@@ -418,6 +380,7 @@ $users_all = $pdo->query("SELECT * FROM users WHERE is_active = 1 ORDER BY fulln
 <?php require_once '../../includes/footer.php'; ?>
 
 <script>
+    // Initialize Modals
     var addModal, editModal, viewModal;
     
     document.addEventListener('DOMContentLoaded', function() {
@@ -426,6 +389,7 @@ $users_all = $pdo->query("SELECT * FROM users WHERE is_active = 1 ORDER BY fulln
         viewModal = new bootstrap.Modal(document.getElementById('viewModal'));
     });
 
+    // Preview Image
     function previewImage(input) {
         if (input.files && input.files[0]) {
             var reader = new FileReader();
@@ -437,12 +401,14 @@ $users_all = $pdo->query("SELECT * FROM users WHERE is_active = 1 ORDER BY fulln
         }
     }
 
+    // Open Add Modal
     function openAddModal() {
         document.getElementById('addForm').reset();
         document.getElementById('imgPreview').style.display = 'none';
         addModal.show();
     }
 
+    // Open Edit Modal
     function openEdit(json) {
         const d = JSON.parse(json);
         document.getElementById('e_id').value = d.id;
@@ -451,8 +417,10 @@ $users_all = $pdo->query("SELECT * FROM users WHERE is_active = 1 ORDER BY fulln
         editModal.show();
     }
 
+    // Open View Modal (With VF-TK Format)
     function openView(json) {
         const d = JSON.parse(json);
+        // Format ID to VF-TK-XXX
         const ticketId = 'VF-TK-' + d.id.toString().padStart(3, '0');
         
         document.getElementById('v_id_text').innerText = ticketId;
@@ -476,6 +444,7 @@ $users_all = $pdo->query("SELECT * FROM users WHERE is_active = 1 ORDER BY fulln
             document.getElementById('v_img_container').style.display = 'none';
         }
 
+        // Load Comments
         const historyBox = document.getElementById('comment_history');
         historyBox.innerHTML = '<div class="text-center small text-muted mt-3">Loading...</div>';
         fetch('get_comments.php?ticket_id=' + d.id)
