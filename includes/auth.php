@@ -23,4 +23,3 @@ function requireAdmin() {
         exit();
     }
 }
-?>

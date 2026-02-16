@@ -91,6 +91,8 @@ $latest_kb = $pdo->query("SELECT k.*, c.name as cat_name FROM kb_articles k LEFT
         /* Animations */
         .hover-scale { transition: 0.2s; }
         .hover-scale:hover { transform: scale(1.05); }
+
+        
     </style>
 </head>
 <body>

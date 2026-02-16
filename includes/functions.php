@@ -26,11 +26,13 @@ if (!function_exists('getStatusBadge')) {
     function getStatusBadge($status)
     {
         return match ($status) {
-            'new' => '<span class="badge bg-danger">New</span>',
-            'assigned' => '<span class="badge bg-primary">Assigned</span>',
-            'pending' => '<span class="badge bg-warning text-dark">Pending</span>',
-            'resolved' => '<span class="badge bg-success">Resolved</span>',
-            'closed' => '<span class="badge bg-secondary">Closed</span>',
+            'new' => '<span class="badge bg-danger">รอรับเรื่อง</span>',      // เดิม New
+            'assigned' => '<span class="badge bg-primary">รับเรื่องแล้ว</span>', // เดิม Assigned
+            'pending' => '<span class="badge bg-warning text-dark">รอดำเนินการ</span>', // เดิม Pending
+            'resolved' => '<span class="badge bg-success">ดำเนินการเสร็จสิ้น</span>', // เดิม Resolved
+            'closed' => '<span class="badge bg-secondary">ปิดงาน</span>',     // เดิม Closed
+
+            // สถานะอื่นๆ (เผื่อไว้)
             'borrowed' => '<span class="badge bg-warning text-dark">กำลังยืม</span>',
             'returned' => '<span class="badge bg-success">คืนแล้ว</span>',
             'active' => '<span class="badge bg-success">ปกติ</span>',
@@ -202,7 +204,8 @@ if (!function_exists('uploadSecureFile')) {
 
 // เพิ่มต่อท้ายไฟล์ functions.php
 if (!function_exists('generateCSRFToken')) {
-    function generateCSRFToken() {
+    function generateCSRFToken()
+    {
         if (session_status() === PHP_SESSION_NONE) session_start();
         if (empty($_SESSION['csrf_token'])) {
             $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
@@ -212,7 +215,8 @@ if (!function_exists('generateCSRFToken')) {
 }
 
 if (!function_exists('validateCSRFToken')) {
-    function validateCSRFToken($token) {
+    function validateCSRFToken($token)
+    {
         if (session_status() === PHP_SESSION_NONE) session_start();
         return isset($_SESSION['csrf_token']) && hash_equals($_SESSION['csrf_token'], $token);
     }
@@ -229,8 +233,8 @@ if (!function_exists('sendLineNotify')) {
     function sendLineNotify($message)
     {
         // 1. ดึงค่าจาก Database
-        $access_token = getSetting('line_channel_token'); 
-        $dest_id = getSetting('line_dest_id');            
+        $access_token = getSetting('line_channel_token');
+        $dest_id = getSetting('line_dest_id');
 
         if (empty($access_token) || empty($dest_id)) {
             return false;
@@ -244,7 +248,8 @@ if (!function_exists('sendLineNotify')) {
 
 // ฟังก์ชันยิง API (ใช้โดยปุ่มทดสอบ และ sendLineNotify)
 if (!function_exists('sendLinePush')) {
-    function sendLinePush($to, $message, $token) {
+    function sendLinePush($to, $message, $token)
+    {
         $url = "https://api.line.me/v2/bot/message/push";
         $headers = [
             "Content-Type: application/json",
@@ -263,7 +268,7 @@ if (!function_exists('sendLinePush')) {
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
         curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-        
+
         // --- ✅ จุดแก้ Error Connection ---
         curl_setopt($ch, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4); // บังคับใช้ IPv4
         curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0); // ปิดเช็ค SSL
