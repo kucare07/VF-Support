@@ -13,7 +13,7 @@ $sql = "SELECT t.*, u.fullname as requester, u.phone, d.name as department,
         LEFT JOIN users u ON t.user_id = u.id
         LEFT JOIN departments d ON u.department_id = d.id
         LEFT JOIN categories c ON t.category_id = c.id
-        LEFT JOIN assets a ON t.asset_id = a.id
+        LEFT JOIN assets a ON t.asset_code = a.asset_code
         LEFT JOIN users tech ON t.assigned_to = tech.id
         WHERE t.id = ?";
 $stmt = $pdo->prepare($sql);
@@ -27,28 +27,28 @@ if (!$t) die("Ticket not found");
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <title>Job Sheet #<?= $t['id'] ?></title>
+    <title>Job Sheet <?= str_pad($t['id'], 5, '0', STR_PAD_LEFT) ?></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Sarabun', sans-serif; background: #eee; }
+        body { font-family: 'Sarabun', sans-serif; background: #eee; font-size: 14px; }
         .page {
             background: #fff;
             width: 210mm; /* A4 Width */
             min-height: 297mm; /* A4 Height */
             margin: 20px auto;
-            padding: 20mm;
+            padding: 15mm;
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
         }
         @media print {
             body { background: #fff; }
-            .page { margin: 0; box-shadow: none; width: 100%; min-height: auto; }
+            .page { margin: 0; box-shadow: none; width: 100%; min-height: auto; padding: 0; }
             .no-print { display: none !important; }
         }
-        .header-line { border-bottom: 2px solid #000; margin-bottom: 20px; padding-bottom: 10px; }
-        .box-section { border: 1px solid #ccc; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
-        .label-head { font-weight: 600; color: #555; }
-        .sign-area { margin-top: 50px; border-top: 1px dashed #ccc; padding-top: 20px; }
+        .header-line { border-bottom: 2px solid #000; margin-bottom: 15px; padding-bottom: 10px; }
+        .box-section { border: 1px solid #ccc; padding: 12px; border-radius: 4px; margin-bottom: 12px; }
+        .label-head { font-weight: 600; color: #333; }
+        .sign-area { margin-top: 40px; border-top: 1px dashed #ccc; padding-top: 20px; }
     </style>
 </head>
 <body>
@@ -62,23 +62,22 @@ if (!$t) die("Ticket not found");
 <div class="page">
     <div class="d-flex justify-content-between align-items-center header-line">
         <div class="d-flex align-items-center">
-            <div style="width: 60px; height: 60px; background: #0d6efd; color: #fff; display:flex; align-items:center; justify-content:center; border-radius:50%; font-weight:bold; font-size:24px; margin-right:15px;">
+            <div style="width: 50px; height: 50px; background: #0d6efd; color: #fff; display:flex; align-items:center; justify-content:center; border-radius:50%; font-weight:bold; font-size:20px; margin-right:15px;">
                 IT
             </div>
             <div>
-                <h4 class="mb-0 fw-bold">ใบแจ้งซ่อม / ใบงานบริการ</h4>
-                <small>สำนักงานกองทุนหมู่บ้านและชุมชนเมืองแห่งชาติ</small>
+                <h5 class="mb-0 fw-bold">ใบแจ้งซ่อม / Service Job</h5>
+                <small>IT Service Center</small>
             </div>
         </div>
         <div class="text-end">
-            <h5 class="fw-bold mb-0">JOB NO: #<?= str_pad($t['id'], 5, '0', STR_PAD_LEFT) ?></h5>
-            <small>วันที่: <?= date('d/m/Y H:i', strtotime($t['created_at'])) ?></small>
+            <h5 class="fw-bold mb-0">JOB NO: <?= str_pad($t['id'], 5, '0', STR_PAD_LEFT) ?></h5> <small>วันที่: <?= date('d/m/Y H:i', strtotime($t['created_at'])) ?></small>
         </div>
     </div>
 
     <div class="box-section">
-        <h6 class="fw-bold border-bottom pb-2 mb-3">1. ข้อมูลผู้แจ้ง (Requester)</h6>
-        <div class="row g-3">
+        <h6 class="fw-bold border-bottom pb-2 mb-3 bg-light p-1">1. ข้อมูลผู้แจ้ง (Requester)</h6>
+        <div class="row g-2">
             <div class="col-6">
                 <span class="label-head">ชื่อ-นามสกุล:</span> <?= $t['requester'] ?>
             </div>
@@ -89,26 +88,26 @@ if (!$t) die("Ticket not found");
                 <span class="label-head">เบอร์โทร:</span> <?= $t['phone'] ?? '-' ?>
             </div>
             <div class="col-6">
-                <span class="label-head">สถานที่:</span> อาคาร A (ตัวอย่าง)
+                <span class="label-head">สถานที่:</span> <?= isset($t['location_name']) ? $t['location_name'] : '-' ?>
             </div>
         </div>
     </div>
 
     <div class="box-section">
-        <h6 class="fw-bold border-bottom pb-2 mb-3">2. รายละเอียดการแจ้งซ่อม (Details)</h6>
-        <div class="row g-3">
+        <h6 class="fw-bold border-bottom pb-2 mb-3 bg-light p-1">2. รายละเอียด (Details)</h6>
+        <div class="row g-2">
             <div class="col-12">
-                <span class="label-head">หัวข้อปัญหา:</span> <?= $t['subject'] ?>
+                <span class="label-head">ประเภทงาน:</span> <?= ucfirst($t['type']) ?>
             </div>
             <div class="col-6">
                 <span class="label-head">หมวดหมู่:</span> <?= $t['category'] ?>
             </div>
             <div class="col-6">
-                <span class="label-head">รหัสทรัพย์สิน:</span> <?= $t['asset_code'] ?? '-' ?> (<?= $t['asset_name'] ?>)
+                <span class="label-head">ทรัพย์สิน:</span> <?= $t['asset_code'] ?? '-' ?> <?= !empty($t['asset_name']) ? '('.$t['asset_name'].')' : '' ?>
             </div>
-            <div class="col-12">
+            <div class="col-12 mt-2">
                 <span class="label-head d-block mb-1">รายละเอียดอาการ:</span>
-                <div class="p-3 bg-light border rounded">
+                <div class="p-2 border rounded" style="min-height: 60px;">
                     <?= nl2br($t['description']) ?>
                 </div>
             </div>
@@ -116,22 +115,25 @@ if (!$t) die("Ticket not found");
     </div>
 
     <div class="box-section">
-        <h6 class="fw-bold border-bottom pb-2 mb-3">3. การดำเนินการ (For Technician)</h6>
-        <div class="row g-3">
+        <h6 class="fw-bold border-bottom pb-2 mb-3 bg-light p-1">3. การดำเนินการ (For Technician)</h6>
+        <div class="row g-2">
             <div class="col-6">
                 <span class="label-head">ผู้รับผิดชอบ:</span> <?= $t['technician'] ?? '..........................................................' ?>
             </div>
             <div class="col-6">
                 <span class="label-head">ความเร่งด่วน:</span> <?= ucfirst($t['priority']) ?>
             </div>
-            <div class="col-12 mt-4">
+            <div class="col-12 mt-3">
                 <span class="label-head">ผลการดำเนินการ / วิธีแก้ไข:</span>
-                <div style="height: 100px; border-bottom: 1px dashed #ccc;"></div>
-                <div style="height: 30px; border-bottom: 1px dashed #ccc;"></div>
+                <div style="height: 80px; border-bottom: 1px dotted #ccc; margin-top: 20px;"></div>
+                <div style="height: 30px; border-bottom: 1px dotted #ccc;"></div>
             </div>
             <div class="col-12 mt-3">
-                 <span class="label-head">สถานะงาน:</span> 
-                 ⬜ เสร็จสิ้น (ใช้งานได้ปกติ) &nbsp;&nbsp; ⬜ รออะไหล่ &nbsp;&nbsp; ⬜ ส่งซ่อมภายนอก &nbsp;&nbsp; ⬜ อื่นๆ ..................
+                 <span class="label-head">สถานะงาน:</span><br>
+                 <span style="display:inline-block; width:150px;">⬜ เสร็จสิ้น</span>
+                 <span style="display:inline-block; width:150px;">⬜ รออะไหล่</span>
+                 <span style="display:inline-block; width:150px;">⬜ ส่งซ่อมภายนอก</span>
+                 <span>⬜ อื่นๆ ...........................</span>
             </div>
         </div>
     </div>

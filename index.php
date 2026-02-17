@@ -2,9 +2,41 @@
 session_start();
 require_once 'config/db_connect.php';
 
+// --- 0. Helper Functions ---
+function getStatusThai($status) {
+    return match ($status) {
+        'new' => 'รอรับเรื่อง',
+        'assigned' => 'รับเรื่องแล้ว',
+        'pending' => 'รอดำเนินการ',
+        'resolved' => 'แก้ไขเสร็จ',
+        'closed' => 'ปิดงาน',
+        default => $status
+    };
+}
+
+function renderMiniStepper($current_status) {
+    $steps = ['new', 'assigned', 'pending', 'resolved', 'closed'];
+    $current_index = array_search($current_status, $steps);
+    if ($current_index === false) $current_index = 0;
+
+    $html = '<div class="mini-stepper mt-1">';
+    foreach ($steps as $index => $step) {
+        $class = '';
+        if ($index < $current_index) {
+            $class = 'completed';
+        } elseif ($index == $current_index) {
+            $class = 'active';
+        }
+        $html .= '<div class="mini-step ' . $class . '"></div>';
+    }
+    $html .= '</div>';
+    return $html;
+}
+
 // --- 1. Queries ข้อมูล ---
 $categories = $pdo->query("SELECT * FROM categories ORDER BY name ASC")->fetchAll();
-$latest_tickets = $pdo->query("SELECT t.*, c.name as cat_name FROM tickets t LEFT JOIN categories c ON t.category_id = c.id ORDER BY t.created_at DESC LIMIT 8")->fetchAll();
+// เรียงจาก ID มากไปน้อย (ล่าสุดขึ้นก่อน)
+$latest_tickets = $pdo->query("SELECT t.*, c.name as cat_name FROM tickets t LEFT JOIN categories c ON t.category_id = c.id ORDER BY t.id DESC LIMIT 8")->fetchAll();
 $available_assets = $pdo->query("SELECT * FROM assets WHERE status = 'spare' ORDER BY name ASC LIMIT 6")->fetchAll();
 $borrowed_list = $pdo->query("SELECT b.*, a.name as asset_name, a.asset_code, a.image, u.fullname as borrower_name FROM borrow_transactions b JOIN assets a ON b.asset_id = a.id LEFT JOIN users u ON b.user_id = u.id WHERE b.status = 'borrowed' ORDER BY b.return_due_date ASC LIMIT 6")->fetchAll();
 $latest_kb = $pdo->query("SELECT k.*, c.name as cat_name FROM kb_articles k LEFT JOIN kb_categories c ON k.category_id = c.id WHERE k.is_public = 1 ORDER BY k.views DESC LIMIT 4")->fetchAll();
@@ -92,7 +124,12 @@ $latest_kb = $pdo->query("SELECT k.*, c.name as cat_name FROM kb_articles k LEFT
         .hover-scale { transition: 0.2s; }
         .hover-scale:hover { transform: scale(1.05); }
 
-        
+        /* Mini Stepper */
+        .mini-stepper { display: flex; align-items: center; gap: 4px; }
+        .mini-step { width: 8px; height: 8px; border-radius: 50%; background-color: #e9ecef; display: inline-block; transition: all 0.3s; }
+        .mini-step.active { background-color: #0d6efd; transform: scale(1.3); box-shadow: 0 0 4px rgba(13, 110, 253, 0.4); }
+        .mini-step.completed { background-color: #198754; }
+
     </style>
 </head>
 <body>
@@ -108,11 +145,10 @@ $latest_kb = $pdo->query("SELECT k.*, c.name as cat_name FROM kb_articles k LEFT
                     <small class="text-muted" style="font-size: 0.75rem;">Support Center</small>
                 </div>
             </a>
-            
         </div>
     </nav>
 
-    <div class="container py-5">
+    <div class="container py-5"> 
         
         <div class="row g-4 mb-5">
             <div class="col-lg-5 animate__animated animate__fadeInLeft">
@@ -164,7 +200,7 @@ $latest_kb = $pdo->query("SELECT k.*, c.name as cat_name FROM kb_articles k LEFT
                             </div>
                             <div class="mb-3">
                                 <label class="small text-muted fw-bold">7. รายละเอียดปัญหา *</label>
-                                <textarea name="description" class="form-control" rows="4" placeholder="ระบุอาการที่พบโดยละเอียด..." required></textarea>
+                                <textarea name="description" class="form-control" rows="4" placeholder="ระบุอาการที่พบโดยละเอียด..." required style="resize: none;"></textarea>
                             </div>
                             
                             <div class="mb-4">
@@ -186,27 +222,43 @@ $latest_kb = $pdo->query("SELECT k.*, c.name as cat_name FROM kb_articles k LEFT
             </div>
 
             <div class="col-lg-7 animate__animated animate__fadeInRight animate__delay-0.5s">
-                <div class="modern-card">
-                    <div class="header-light">
+                <div class="modern-card d-flex flex-column">
+                    <div class="header-light flex-shrink-0">
                         <h6 class="m-0 fw-bold text-primary"><i class="bi bi-clock-history me-2"></i>รายการแจ้งซ่อมล่าสุด</h6>
                         <button class="btn btn-sm btn-light rounded-circle text-muted" onclick="location.reload()"><i class="bi bi-arrow-clockwise"></i></button>
                     </div>
-                    <div class="p-0" style="max-height: 520px; overflow-y: auto;">
-                        <?php foreach ($latest_tickets as $row): 
+                    <div class="p-0 flex-grow-1 overflow-auto">
+                        <?php 
+                        $i = 1;
+                        foreach ($latest_tickets as $row): 
                             $st = $row['status'];
-                            $bg = match($st) { 'new'=>'bg-secondary', 'assigned'=>'bg-info text-dark', 'resolved'=>'bg-success', 'closed'=>'bg-dark', default=>'bg-light text-dark' };
+                            $bg = match($st) { 
+                                'new'=>'bg-secondary', 
+                                'assigned'=>'bg-info text-dark', 
+                                'pending'=>'bg-warning text-dark', 
+                                'resolved'=>'bg-success', 
+                                'closed'=>'bg-dark', 
+                                default=>'bg-light text-dark' 
+                            };
+                            $status_thai = getStatusThai($st);
                         ?>
                         <div class="list-item-modern" onclick="viewTicket('<?= $row['id'] ?>')">
                             <div class="icon-box theme-ticket"><i class="bi bi-ticket-detailed"></i></div>
                             <div class="flex-grow-1 overflow-hidden">
                                 <div class="d-flex justify-content-between align-items-center mb-1">
-                                    <span class="fw-bold text-truncate text-dark" style="max-width: 70%;">#<?= $row['id'] ?> <?= htmlspecialchars($row['title']??$row['description']) ?></span>
-                                    <span class="badge rounded-pill <?= $bg ?>" style="font-size: 0.7rem;"><?= ucfirst($st) ?></span>
+                                    <span class="fw-bold text-truncate text-dark" style="max-width: 65%;">
+                                        <?= $i++ ?>. <?= htmlspecialchars($row['title']??$row['description']) ?>
+                                    </span>
+                                    <span class="badge rounded-pill <?= $bg ?>" style="font-size: 0.7rem;"><?= $status_thai ?></span>
                                 </div>
-                                <div class="small text-muted">
-                                    <i class="bi bi-tag"></i> <?= $row['cat_name'] ?> 
-                                    <span class="mx-1">•</span> 
-                                    <?= date('d/m H:i', strtotime($row['created_at'])) ?>
+                                <div class="d-flex justify-content-between align-items-end">
+                                    <div class="small text-muted">
+                                        <i class="bi bi-tag"></i> <?= $row['cat_name'] ?> 
+                                        <span class="mx-1">•</span> 
+                                        <?= date('d/m H:i', strtotime($row['created_at'])) ?>
+                                        
+                                        <?= renderMiniStepper($st) ?>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -342,7 +394,10 @@ $latest_kb = $pdo->query("SELECT k.*, c.name as cat_name FROM kb_articles k LEFT
     <script>
         // 1. Typewriter Effect
         const text = "ระบบแจ้งซ่อมและติดตามสถานะ 24 ชม.";
-        let i = 0; function typeWriter() { if (i < text.length) { document.getElementById("typewriter-text").innerHTML += text.charAt(i); i++; setTimeout(typeWriter, 50); } }
+        let i = 0; function typeWriter() { 
+            const el = document.getElementById("typewriter-text");
+            if (el && i < text.length) { el.innerHTML += text.charAt(i); i++; setTimeout(typeWriter, 50); } 
+        }
         window.onload = typeWriter;
 
         // 2. Submit Form
