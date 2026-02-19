@@ -19,22 +19,29 @@ $locations = $pdo->query($sql)->fetchAll();
     </nav>
 
     <div class="main-content-scroll">
-        <div class="container-fluid p-3"> 
-            
+        <div class="container-fluid p-3">
+
             <?php if (isset($_GET['msg'])): ?>
-                <script>Swal.fire({icon: 'success', title: 'สำเร็จ!', timer: 1500, showConfirmButton: false});</script>
+                <script>
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'สำเร็จ!',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+                </script>
             <?php endif; ?>
 
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
                     <div class="d-flex align-items-center gap-2">
                         <h6 class="fw-bold text-primary m-0"><i class="bi bi-geo-alt-fill me-2"></i>รายการสถานที่</h6>
-                        
+
                         <button id="bulkActionBtn" class="btn btn-danger btn-sm shadow-sm animate__animated animate__fadeIn" style="display:none;" onclick="deleteSelected('process.php?action=bulk_delete_location')">
                             <i class="bi bi-trash"></i> ลบที่เลือก
                         </button>
                     </div>
-                    
+
                     <button class="btn btn-sm btn-primary shadow-sm hover-scale" onclick="openModal('add')">
                         <i class="bi bi-plus-lg me-1"></i> เพิ่มสถานที่ใหม่
                     </button>
@@ -48,26 +55,27 @@ $locations = $pdo->query($sql)->fetchAll();
                                     <th class="w-checkbox py-3 text-center">
                                         <input type="checkbox" class="form-check-input" id="checkAll" onclick="toggleAll(this)">
                                     </th>
+                                    <th class="text-center" style="width: 50px;">ลำดับ</th>
                                     <th class="ps-3">ชื่อสถานที่</th>
                                     <th>สถานะ</th>
                                     <th class="text-end pe-3">จัดการ</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php foreach ($locations as $row): 
+                                <?php $i = 1;
+                                foreach ($locations as $row):
                                     $json = htmlspecialchars(json_encode($row), ENT_QUOTES, 'UTF-8');
-                                    
-                                    // ตรวจสอบ status ก่อนใช้งาน
                                     $status = isset($row['status']) ? $row['status'] : 'active';
-                                    $status_badge = ($status == 'active') 
-                                        ? '<span class="badge bg-success">Active</span>' 
+                                    $status_badge = ($status == 'active')
+                                        ? '<span class="badge bg-success">Active</span>'
                                         : '<span class="badge bg-secondary">Inactive</span>';
                                 ?>
                                     <tr>
                                         <td class="text-center">
                                             <input type="checkbox" class="form-check-input row-checkbox" value="<?= $row['id'] ?>" onclick="checkRow()">
                                         </td>
-                                        
+                                        <td class="text-center text-muted small fw-bold"><?= $i++ ?></td>
+
                                         <td class="ps-3 fw-bold text-dark"><?= htmlspecialchars($row['name']) ?></td>
                                         <td><?= $status_badge ?></td>
                                         <td class="text-end pe-3 text-nowrap">
@@ -91,26 +99,26 @@ $locations = $pdo->query($sql)->fetchAll();
             <form action="process.php" method="POST">
                 <input type="hidden" name="action" id="l_action">
                 <input type="hidden" name="id" id="l_id">
-                
+
                 <div class="header-gradient">
                     <div class="d-flex justify-content-between align-items-center">
                         <h6 class="modal-title fw-bold m-0" id="l_title">จัดการสถานที่</h6>
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                     </div>
                 </div>
-                
+
                 <div class="modal-body p-4 bg-white">
                     <div class="mb-3">
                         <label class="form-label small fw-bold">ชื่อสถานที่ <span class="text-danger">*</span></label>
                         <input type="text" name="name" id="name" class="form-control" placeholder="เช่น อาคาร A, ชั้น 2" required>
                     </div>
-                    
+
                     <div class="form-check bg-light p-2 rounded border">
                         <input class="form-check-input ms-1" type="checkbox" name="status" id="status" value="active" checked>
                         <label class="form-check-label small fw-bold ms-2" for="status">เปิดใช้งาน (Active)</label>
                     </div>
                 </div>
-                
+
                 <div class="modal-footer py-2 border-top bg-light">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
                     <button type="submit" class="btn btn-primary px-4 fw-bold hover-scale">บันทึก</button>

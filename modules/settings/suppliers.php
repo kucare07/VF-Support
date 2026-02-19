@@ -19,22 +19,29 @@ $suppliers = $pdo->query($sql)->fetchAll();
     </nav>
 
     <div class="main-content-scroll">
-        <div class="container-fluid p-3"> 
-            
+        <div class="container-fluid p-3">
+
             <?php if (isset($_GET['msg'])): ?>
-                <script>Swal.fire({icon: 'success', title: 'สำเร็จ!', timer: 1500, showConfirmButton: false});</script>
+                <script>
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'สำเร็จ!',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+                </script>
             <?php endif; ?>
 
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
                     <div class="d-flex align-items-center gap-2">
                         <h6 class="fw-bold text-primary m-0"><i class="bi bi-shop me-2"></i>รายการผู้ขาย</h6>
-                        
+
                         <button id="bulkActionBtn" class="btn btn-danger btn-sm shadow-sm animate__animated animate__fadeIn" style="display:none;" onclick="deleteSelected('process.php?action=bulk_delete_supplier')">
                             <i class="bi bi-trash"></i> ลบที่เลือก
                         </button>
                     </div>
-                    
+
                     <button class="btn btn-sm btn-primary shadow-sm hover-scale" onclick="openModal('add')">
                         <i class="bi bi-plus-lg me-1"></i> เพิ่มผู้ขายใหม่
                     </button>
@@ -48,6 +55,7 @@ $suppliers = $pdo->query($sql)->fetchAll();
                                     <th class="w-checkbox py-3 text-center">
                                         <input type="checkbox" class="form-check-input" id="checkAll" onclick="toggleAll(this)">
                                     </th>
+                                    <th class="text-center" style="width: 50px;">ลำดับ</th>
                                     <th class="ps-3">ชื่อบริษัท/ร้านค้า</th>
                                     <th>ผู้ติดต่อ</th>
                                     <th>เบอร์โทร</th>
@@ -55,14 +63,16 @@ $suppliers = $pdo->query($sql)->fetchAll();
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php foreach ($suppliers as $row): 
+                                <?php $i = 1;
+                                foreach ($suppliers as $row):
                                     $json = htmlspecialchars(json_encode($row), ENT_QUOTES, 'UTF-8');
                                 ?>
                                     <tr>
                                         <td class="text-center">
                                             <input type="checkbox" class="form-check-input row-checkbox" value="<?= $row['id'] ?>" onclick="checkRow()">
                                         </td>
-                                        
+                                        <td class="text-center text-muted small fw-bold"><?= $i++ ?></td>
+
                                         <td class="ps-3 fw-bold text-dark"><?= htmlspecialchars($row['name']) ?></td>
                                         <td><?= htmlspecialchars($row['contact_name'] ?? '-') ?></td>
                                         <td><?= htmlspecialchars($row['phone'] ?? '-') ?></td>
@@ -87,14 +97,14 @@ $suppliers = $pdo->query($sql)->fetchAll();
             <form action="process.php" method="POST">
                 <input type="hidden" name="action" id="s_action">
                 <input type="hidden" name="id" id="s_id">
-                
+
                 <div class="header-gradient">
                     <div class="d-flex justify-content-between align-items-center">
                         <h6 class="modal-title fw-bold m-0" id="s_title">จัดการข้อมูลผู้ขาย</h6>
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                     </div>
                 </div>
-                
+
                 <div class="modal-body p-4 bg-white">
                     <div class="mb-3">
                         <label class="form-label small fw-bold">ชื่อบริษัท/ร้านค้า <span class="text-danger">*</span></label>
@@ -119,7 +129,7 @@ $suppliers = $pdo->query($sql)->fetchAll();
                         <textarea name="address" id="address" class="form-control" rows="2"></textarea>
                     </div>
                 </div>
-                
+
                 <div class="modal-footer py-2 border-top bg-light">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
                     <button type="submit" class="btn btn-primary px-4 fw-bold hover-scale">บันทึก</button>
@@ -147,10 +157,10 @@ $suppliers = $pdo->query($sql)->fetchAll();
             const d = JSON.parse(json);
             document.getElementById('s_id').value = d.id;
             document.getElementById('name').value = d.name;
-            if(document.getElementById('contact_name')) document.getElementById('contact_name').value = d.contact_name || '';
-            if(document.getElementById('phone')) document.getElementById('phone').value = d.phone || '';
-            if(document.getElementById('email')) document.getElementById('email').value = d.email || '';
-            if(document.getElementById('address')) document.getElementById('address').value = d.address || '';
+            if (document.getElementById('contact_name')) document.getElementById('contact_name').value = d.contact_name || '';
+            if (document.getElementById('phone')) document.getElementById('phone').value = d.phone || '';
+            if (document.getElementById('email')) document.getElementById('email').value = d.email || '';
+            if (document.getElementById('address')) document.getElementById('address').value = d.address || '';
         }
         supModal.show();
     }

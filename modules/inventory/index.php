@@ -19,22 +19,29 @@ $items = $pdo->query($sql)->fetchAll();
     </nav>
 
     <div class="main-content-scroll">
-        <div class="container-fluid p-3"> 
-            
+        <div class="container-fluid p-3">
+
             <?php if (isset($_GET['msg'])): ?>
-                <script>Swal.fire({icon: 'success', title: 'สำเร็จ!', timer: 1500, showConfirmButton: false});</script>
+                <script>
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'สำเร็จ!',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+                </script>
             <?php endif; ?>
 
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
                     <div class="d-flex align-items-center gap-2">
                         <h6 class="fw-bold text-primary m-0"><i class="bi bi-box-seam me-2"></i>รายการวัสดุ (Consumables)</h6>
-                        
+
                         <button id="bulkActionBtn" class="btn btn-danger btn-sm shadow-sm animate__animated animate__fadeIn" style="display:none;" onclick="deleteSelected('process.php?action=bulk_delete')">
                             <i class="bi bi-trash"></i> ลบที่เลือก
                         </button>
                     </div>
-                    
+
                     <button class="btn btn-sm btn-primary shadow-sm hover-scale" onclick="openItemModal('add')">
                         <i class="bi bi-plus-lg me-1"></i> เพิ่มสินค้าใหม่
                     </button>
@@ -48,6 +55,7 @@ $items = $pdo->query($sql)->fetchAll();
                                     <th class="w-checkbox py-3 text-center">
                                         <input type="checkbox" class="form-check-input" id="checkAll" onclick="toggleAll(this)">
                                     </th>
+                                    <th class="text-center" style="width: 50px;">ลำดับ</th>
                                     <th class="ps-3">รูปภาพ</th>
                                     <th>ชื่อสินค้า / รหัส</th>
                                     <th class="text-center">คงเหลือ (Qty)</th>
@@ -57,21 +65,17 @@ $items = $pdo->query($sql)->fetchAll();
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php foreach ($items as $row):
+                                <?php $i = 1;
+                                foreach ($items as $row):
                                     $json = htmlspecialchars(json_encode($row), ENT_QUOTES, 'UTF-8');
-                                    
-                                    // Status Logic
                                     $status_badge = '<span class="badge bg-success">ปกติ</span>';
                                     $row_class = '';
-                                    
                                     if ($row['qty_on_hand'] == 0) {
                                         $status_badge = '<span class="badge bg-secondary">สินค้าหมด</span>';
-                                        $row_class = 'bg-light text-muted'; // ทำสีเทาถ้าหมด
+                                        $row_class = 'bg-light text-muted';
                                     } elseif ($row['qty_on_hand'] <= $row['min_stock']) {
                                         $status_badge = '<span class="badge bg-danger animate__animated animate__pulse animate__infinite">ใกล้หมด!</span>';
                                     }
-
-                                    // Image
                                     $img_name = isset($row['image']) ? $row['image'] : null;
                                     $img_src = $img_name ? "../../uploads/inventory/" . $img_name : "https://via.placeholder.com/40?text=IMG";
                                 ?>
@@ -79,7 +83,8 @@ $items = $pdo->query($sql)->fetchAll();
                                         <td class="text-center">
                                             <input type="checkbox" class="form-check-input row-checkbox" value="<?= $row['id'] ?>" onclick="checkRow()">
                                         </td>
-                                        
+                                        <td class="text-center text-muted small fw-bold"><?= $i++ ?></td>
+
                                         <td class="ps-3">
                                             <img src="<?= $img_src ?>" class="rounded border shadow-sm" width="40" height="40" style="object-fit:cover;">
                                         </td>
@@ -99,7 +104,6 @@ $items = $pdo->query($sql)->fetchAll();
                                                 <button class="btn btn-sm btn-outline-success bg-white shadow-sm" onclick="openStockModal(<?= $row['id'] ?>, 'in', '<?= htmlspecialchars($row['name']) ?>')" title="รับของเข้า"><i class="bi bi-plus-lg"></i></button>
                                                 <button class="btn btn-sm btn-outline-danger bg-white shadow-sm" onclick="openStockModal(<?= $row['id'] ?>, 'out', '<?= htmlspecialchars($row['name']) ?>')" title="เบิกของออก" <?= $row['qty_on_hand'] == 0 ? 'disabled' : '' ?>><i class="bi bi-dash-lg"></i></button>
                                             </div>
-
                                             <button class="btn btn-sm btn-light border text-warning shadow-sm" onclick="openItemModal('edit', '<?= $json ?>')" title="แก้ไข"><i class="bi bi-pencil"></i></button>
                                             <button class="btn btn-sm btn-light border text-secondary shadow-sm" onclick="confirmDelete('process.php?action=delete&id=<?= $row['id'] ?>')" title="ลบ"><i class="bi bi-trash"></i></button>
                                         </td>
@@ -120,14 +124,14 @@ $items = $pdo->query($sql)->fetchAll();
             <form action="process.php" method="POST" enctype="multipart/form-data">
                 <input type="hidden" name="action" id="i_action">
                 <input type="hidden" name="id" id="i_id">
-                
+
                 <div class="header-gradient">
                     <div class="d-flex justify-content-between align-items-center">
                         <h6 class="modal-title fw-bold m-0" id="i_title">จัดการสินค้า</h6>
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                     </div>
                 </div>
-                
+
                 <div class="modal-body p-4 bg-white">
                     <div class="mb-3">
                         <label class="form-label small fw-bold">ชื่อสินค้า <span class="text-danger">*</span></label>
@@ -184,21 +188,21 @@ $items = $pdo->query($sql)->fetchAll();
                     <h6 class="modal-title fw-bold" id="s_title"></h6>
                     <button type="button" class="btn-close btn-close-white btn-sm" data-bs-dismiss="modal"></button>
                 </div>
-                
+
                 <div class="modal-body text-center p-4">
                     <div class="mb-3">
                         <span class="badge bg-light text-dark border mb-2" id="s_name_badge"></span>
                         <h5 class="fw-bold" id="s_name"></h5>
                     </div>
-                    
+
                     <div class="form-floating mb-3">
                         <input type="number" name="qty" class="form-control fw-bold text-center fs-2 text-primary" id="s_qty" placeholder="จำนวน" value="1" min="1" required>
                         <label for="s_qty">จำนวน (Quantity)</label>
                     </div>
-                    
+
                     <textarea name="note" class="form-control form-control-sm bg-light" placeholder="ระบุหมายเหตุ (เช่น เบิกให้ใคร, สั่งซื้อจากร้านไหน)..." rows="3" required></textarea>
                 </div>
-                
+
                 <div class="modal-footer py-2 border-top bg-light justify-content-center">
                     <button type="submit" class="btn w-100 fw-bold shadow-sm" id="s_btn">ยืนยัน</button>
                 </div>
@@ -244,8 +248,8 @@ $items = $pdo->query($sql)->fetchAll();
             document.getElementById('unit').value = d.unit;
             document.getElementById('min_stock').value = d.min_stock;
             document.getElementById('unit_price').value = d.unit_price;
-            
-            if(d.image) {
+
+            if (d.image) {
                 document.getElementById('preview_img').src = '../../uploads/inventory/' + d.image;
                 document.getElementById('preview_img').style.display = 'block';
             }
@@ -274,7 +278,7 @@ $items = $pdo->query($sql)->fetchAll();
             btn.className = 'btn btn-danger hover-scale';
             btn.innerText = 'ยืนยันการเบิก';
         }
-        
+
         document.querySelector('#stockModal textarea').value = '';
         document.getElementById('s_qty').value = 1;
 

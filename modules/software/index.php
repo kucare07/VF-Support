@@ -26,22 +26,29 @@ $softwares = $pdo->query($sql)->fetchAll();
     </nav>
 
     <div class="main-content-scroll">
-        <div class="container-fluid p-3"> 
-            
+        <div class="container-fluid p-3">
+
             <?php if (isset($_GET['msg'])): ?>
-                <script>Swal.fire({icon: 'success', title: 'สำเร็จ!', timer: 1500, showConfirmButton: false});</script>
+                <script>
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'สำเร็จ!',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+                </script>
             <?php endif; ?>
 
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
                     <div class="d-flex align-items-center gap-2">
                         <h6 class="fw-bold text-primary m-0"><i class="bi bi-window-sidebar me-2"></i>รายชื่อซอฟต์แวร์ (Catalog)</h6>
-                        
+
                         <button id="bulkActionBtn" class="btn btn-danger btn-sm shadow-sm animate__animated animate__fadeIn" style="display:none;" onclick="deleteSelected('process.php?action=bulk_delete')">
                             <i class="bi bi-trash"></i> ลบที่เลือก
                         </button>
                     </div>
-                    
+
                     <button class="btn btn-sm btn-primary shadow-sm hover-scale" onclick="openSoftModal('add')">
                         <i class="bi bi-plus-lg me-1"></i> เพิ่มซอฟต์แวร์
                     </button>
@@ -55,6 +62,7 @@ $softwares = $pdo->query($sql)->fetchAll();
                                     <th class="w-checkbox py-3 text-center">
                                         <input type="checkbox" class="form-check-input" id="checkAll" onclick="toggleAll(this)">
                                     </th>
+                                    <th class="text-center" style="width: 50px;">ลำดับ</th>
                                     <th class="ps-3">ชื่อซอฟต์แวร์</th>
                                     <th>ผู้ผลิต (Publisher)</th>
                                     <th>เวอร์ชัน</th>
@@ -64,10 +72,9 @@ $softwares = $pdo->query($sql)->fetchAll();
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php foreach ($softwares as $row):
+                                <?php $i = 1;
+                                foreach ($softwares as $row):
                                     $json = htmlspecialchars(json_encode($row), ENT_QUOTES, 'UTF-8');
-                                    
-                                    // Usage Bar Calculation
                                     $total = $row['total_seats'] ?: 0;
                                     $used = $row['used_seats'] ?: 0;
                                     $percent = ($total > 0) ? ($used / $total) * 100 : 0;
@@ -77,7 +84,8 @@ $softwares = $pdo->query($sql)->fetchAll();
                                         <td class="text-center">
                                             <input type="checkbox" class="form-check-input row-checkbox" value="<?= $row['id'] ?>" onclick="checkRow()">
                                         </td>
-                                        
+                                        <td class="text-center text-muted small fw-bold"><?= $i++ ?></td>
+
                                         <td class="ps-3 fw-bold text-primary"><?= $row['name'] ?></td>
                                         <td><?= $row['publisher'] ?: '-' ?></td>
                                         <td><span class="badge bg-light text-dark border"><?= $row['version'] ?: 'N/A' ?></span></td>
@@ -115,14 +123,14 @@ $softwares = $pdo->query($sql)->fetchAll();
             <form action="process.php" method="POST">
                 <input type="hidden" name="action" id="s_action">
                 <input type="hidden" name="id" id="s_id">
-                
+
                 <div class="header-gradient">
                     <div class="d-flex justify-content-between align-items-center">
                         <h6 class="modal-title fw-bold m-0" id="s_title">จัดการซอฟต์แวร์</h6>
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                     </div>
                 </div>
-                
+
                 <div class="modal-body p-4 bg-white">
                     <div class="mb-3">
                         <label class="form-label small fw-bold">ชื่อซอฟต์แวร์ <span class="text-danger">*</span></label>

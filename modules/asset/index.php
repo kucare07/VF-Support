@@ -66,14 +66,19 @@ $assets = $stmt->fetchAll();
     </nav>
 
     <div class="main-content-scroll">
-        <div class="container-fluid p-3"> 
-            
+        <div class="container-fluid p-3">
+
             <?php if (isset($_GET['msg'])): ?>
                 <script>
                     let msg = "<?= $_GET['msg'] ?>";
                     let title = "สำเร็จ!";
-                    if(msg === 'imported') title = "นำเข้าข้อมูลเรียบร้อย";
-                    Swal.fire({icon: 'success', title: title, timer: 1500, showConfirmButton: false});
+                    if (msg === 'imported') title = "นำเข้าข้อมูลเรียบร้อย";
+                    Swal.fire({
+                        icon: 'success',
+                        title: title,
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
                 </script>
             <?php endif; ?>
 
@@ -82,12 +87,12 @@ $assets = $stmt->fetchAll();
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <div class="d-flex align-items-center gap-2">
                             <h6 class="fw-bold text-primary m-0"><i class="bi bi-pc-display me-2"></i>รายการครุภัณฑ์ทั้งหมด</h6>
-                            
+
                             <button id="bulkActionBtn" class="btn btn-danger btn-sm shadow-sm animate__animated animate__fadeIn" style="display:none;" onclick="deleteSelected('process.php?action=bulk_delete')">
                                 <i class="bi bi-trash"></i> ลบที่เลือก
                             </button>
                         </div>
-                        
+
                         <div>
                             <a href="export_assets.php" target="_blank" class="btn btn-sm btn-success me-1 shadow-sm">
                                 <i class="bi bi-file-earmark-excel"></i> Export
@@ -151,6 +156,7 @@ $assets = $stmt->fetchAll();
                                     <th class="w-checkbox py-3 text-center">
                                         <input type="checkbox" class="form-check-input" id="checkAll" onclick="toggleAll(this)">
                                     </th>
+                                    <th class="text-center" style="width: 50px;">ลำดับ</th>
                                     <th class="ps-3">รหัสทรัพย์สิน (Code)</th>
                                     <th>ชื่อ/รุ่น/รายละเอียด</th>
                                     <th>ประเภท (Type)</th>
@@ -162,10 +168,10 @@ $assets = $stmt->fetchAll();
                             </thead>
                             <tbody>
                                 <?php if (count($assets) > 0): ?>
+                                    <?php $i = 1; // ตัวแปรลำดับ 
+                                    ?>
                                     <?php foreach ($assets as $item):
                                         $jsonData = htmlspecialchars(json_encode($item), ENT_QUOTES, 'UTF-8');
-                                        
-                                        // Prepare Variables
                                         $code = htmlspecialchars($item['asset_code'] ?? '-');
                                         $name = htmlspecialchars($item['name'] ?? '-');
                                         $brand = htmlspecialchars($item['brand'] ?? '');
@@ -173,8 +179,7 @@ $assets = $stmt->fetchAll();
                                         $type = htmlspecialchars($item['type_name'] ?? '-');
                                         $location = htmlspecialchars($item['location_name'] ?? '-');
                                         $owner = htmlspecialchars($item['owner_name'] ?? '-');
-                                        
-                                        // Status Logic
+
                                         $st_val = $item['status'] ?? 'active';
                                         $st_color = match ($st_val) {
                                             'active' => 'success',
@@ -195,12 +200,11 @@ $assets = $stmt->fetchAll();
                                             <td class="text-center">
                                                 <input type="checkbox" class="form-check-input row-checkbox" value="<?= $item['id'] ?>" onclick="checkRow()">
                                             </td>
-                                            
+                                            <td class="text-center text-muted small fw-bold"><?= $i++ ?></td>
+
                                             <td class="ps-3 fw-bold text-primary text-nowrap">
                                                 <?= $code ?>
-                                                <?php if (!empty($item['image'])): ?>
-                                                    <i class="bi bi-image text-muted ms-1" title="มีรูปภาพ"></i>
-                                                <?php endif; ?>
+                                                <?php if (!empty($item['image'])): ?><i class="bi bi-image text-muted ms-1" title="มีรูปภาพ"></i><?php endif; ?>
                                             </td>
                                             <td class="text-wrap-fix">
                                                 <div class="fw-bold text-dark"><?= $name ?></div>
@@ -219,7 +223,9 @@ $assets = $stmt->fetchAll();
                                         </tr>
                                     <?php endforeach; ?>
                                 <?php else: ?>
-                                    <tr><td colspan="8" class="text-center py-4 text-muted">ไม่พบข้อมูล</td></tr>
+                                    <tr>
+                                        <td colspan="9" class="text-center py-4 text-muted">ไม่พบข้อมูล</td>
+                                    </tr>
                                 <?php endif; ?>
                             </tbody>
                         </table>
@@ -236,21 +242,21 @@ $assets = $stmt->fetchAll();
             <form action="process.php" method="POST" enctype="multipart/form-data">
                 <input type="hidden" name="action" id="formAction">
                 <input type="hidden" name="id" id="assetId">
-                
+
                 <div class="header-gradient">
                     <div class="d-flex justify-content-between align-items-center">
                         <h6 class="modal-title fw-bold m-0" id="formTitle">จัดการครุภัณฑ์</h6>
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                     </div>
                 </div>
-                
+
                 <div class="modal-body p-4 bg-white">
                     <ul class="nav nav-tabs mb-3" id="myTab" role="tablist">
                         <li class="nav-item"><button class="nav-link active py-1 small fw-bold" id="general-tab" data-bs-toggle="tab" data-bs-target="#general" type="button">ข้อมูลทั่วไป</button></li>
                         <li class="nav-item"><button class="nav-link py-1 small fw-bold" id="spec-tab" data-bs-toggle="tab" data-bs-target="#spec" type="button">สเปกเครื่อง</button></li>
                         <li class="nav-item"><button class="nav-link py-1 small fw-bold" id="status-tab" data-bs-toggle="tab" data-bs-target="#status" type="button">สถานะ/การจัดซื้อ</button></li>
                     </ul>
-                    
+
                     <div class="tab-content" id="myTabContent">
                         <div class="tab-pane fade show active" id="general">
                             <div class="row g-3">
@@ -273,7 +279,7 @@ $assets = $stmt->fetchAll();
                                 </div>
                             </div>
                         </div>
-                        
+
                         <div class="tab-pane fade" id="spec">
                             <div class="row g-3">
                                 <div class="col-md-12"><label class="form-label small fw-bold">CPU</label><input type="text" name="spec_cpu" id="spec_cpu" class="form-control"></div>
@@ -282,7 +288,7 @@ $assets = $stmt->fetchAll();
                                 <div class="col-md-12"><label class="form-label small fw-bold">OS / License</label><input type="text" name="os_license" id="os_license" class="form-control"></div>
                             </div>
                         </div>
-                        
+
                         <div class="tab-pane fade" id="status">
                             <div class="row g-3">
                                 <div class="col-md-6"><label class="form-label small fw-bold">สถานะ</label><select name="status" id="status_val" class="form-select">
@@ -338,14 +344,38 @@ $assets = $stmt->fetchAll();
                         <div class="row">
                             <div class="col-md-8">
                                 <table class="table table-bordered table-sm mb-0 small">
-                                    <tr><td class="bg-light fw-bold w-25 ps-3">รหัส</td><td class="ps-3" id="v_code"></td></tr>
-                                    <tr><td class="bg-light fw-bold ps-3">ชื่อ</td><td class="ps-3" id="v_name"></td></tr>
-                                    <tr><td class="bg-light fw-bold ps-3">สเปก</td><td class="ps-3" id="v_spec"></td></tr>
-                                    <tr><td class="bg-light fw-bold ps-3">ผู้ใช้</td><td class="ps-3" id="v_user"></td></tr>
-                                    <tr><td class="bg-light fw-bold ps-3">สถานที่</td><td class="ps-3" id="v_location"></td></tr>
-                                    <tr><td class="bg-light fw-bold ps-3">ผู้ขาย</td><td class="ps-3" id="v_supplier"></td></tr>
-                                    <tr><td class="bg-light fw-bold ps-3">ประกันหมด</td><td class="ps-3" id="v_warranty"></td></tr>
-                                    <tr><td class="bg-light fw-bold ps-3">สถานะ</td><td class="ps-3" id="v_status"></td></tr>
+                                    <tr>
+                                        <td class="bg-light fw-bold w-25 ps-3">รหัส</td>
+                                        <td class="ps-3" id="v_code"></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="bg-light fw-bold ps-3">ชื่อ</td>
+                                        <td class="ps-3" id="v_name"></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="bg-light fw-bold ps-3">สเปก</td>
+                                        <td class="ps-3" id="v_spec"></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="bg-light fw-bold ps-3">ผู้ใช้</td>
+                                        <td class="ps-3" id="v_user"></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="bg-light fw-bold ps-3">สถานที่</td>
+                                        <td class="ps-3" id="v_location"></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="bg-light fw-bold ps-3">ผู้ขาย</td>
+                                        <td class="ps-3" id="v_supplier"></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="bg-light fw-bold ps-3">ประกันหมด</td>
+                                        <td class="ps-3" id="v_warranty"></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="bg-light fw-bold ps-3">สถานะ</td>
+                                        <td class="ps-3" id="v_status"></td>
+                                    </tr>
                                 </table>
                             </div>
                             <div class="col-md-4 text-center">
@@ -356,9 +386,39 @@ $assets = $stmt->fetchAll();
                             </div>
                         </div>
                     </div>
-                    <div class="tab-pane fade" id="v_history"><div class="table-responsive"><table class="table table-hover table-sm small"><tbody id="history_body"><tr><td class="text-center">Loading...</td></tr></tbody></table></div></div>
-                    <div class="tab-pane fade" id="v_tickets"><div class="table-responsive"><table class="table table-hover table-sm small"><tbody id="ticket_body"><tr><td class="text-center">Loading...</td></tr></tbody></table></div></div>
-                    <div class="tab-pane fade" id="v_software"><div class="table-responsive"><table class="table table-hover table-sm small"><tbody id="software_body"><tr><td class="text-center">Loading...</td></tr></tbody></table></div></div>
+                    <div class="tab-pane fade" id="v_history">
+                        <div class="table-responsive">
+                            <table class="table table-hover table-sm small">
+                                <tbody id="history_body">
+                                    <tr>
+                                        <td class="text-center">Loading...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="tab-pane fade" id="v_tickets">
+                        <div class="table-responsive">
+                            <table class="table table-hover table-sm small">
+                                <tbody id="ticket_body">
+                                    <tr>
+                                        <td class="text-center">Loading...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="tab-pane fade" id="v_software">
+                        <div class="table-responsive">
+                            <table class="table table-hover table-sm small">
+                                <tbody id="software_body">
+                                    <tr>
+                                        <td class="text-center">Loading...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -391,10 +451,12 @@ $assets = $stmt->fetchAll();
         document.getElementById('assetId').value = '';
         document.getElementById('preview_img').style.display = 'none';
         document.forms[0].reset();
-        
+
         // Reset Select2 if used
-        if(window.$ && $.fn.select2) { $('#current_user_id').val(null).trigger('change'); }
-        
+        if (window.$ && $.fn.select2) {
+            $('#current_user_id').val(null).trigger('change');
+        }
+
         formModal.show();
     }
 
@@ -403,20 +465,25 @@ $assets = $stmt->fetchAll();
         document.getElementById('formAction').value = 'edit';
         document.getElementById('formTitle').innerText = 'แก้ไขรายการ';
         document.getElementById('assetId').value = data.id;
-        
+
         // Map Fields
-        const fields = ['asset_code','name','serial_number','brand','model','spec_cpu','spec_ram','spec_storage','os_license','price','purchase_date','warranty_expire'];
-        fields.forEach(f => { if(document.getElementById(f)) document.getElementById(f).value = data[f] || ''; });
+        const fields = ['asset_code', 'name', 'serial_number', 'brand', 'model', 'spec_cpu', 'spec_ram', 'spec_storage', 'os_license', 'price', 'purchase_date', 'warranty_expire'];
+        fields.forEach(f => {
+            if (document.getElementById(f)) document.getElementById(f).value = data[f] || '';
+        });
 
         // Selects
         if (data.asset_type_id) document.getElementById('asset_type_id').value = data.asset_type_id;
         if (data.status) document.getElementById('status_val').value = data.status;
         if (data.location_id) document.getElementById('location_id').value = data.location_id;
         if (data.supplier_id) document.getElementById('supplier_id').value = data.supplier_id;
-        
+
         if (data.current_user_id) {
-            if(window.$ && $.fn.select2) { $('#current_user_id').val(data.current_user_id).trigger('change'); }
-            else { document.getElementById('current_user_id').value = data.current_user_id; }
+            if (window.$ && $.fn.select2) {
+                $('#current_user_id').val(data.current_user_id).trigger('change');
+            } else {
+                document.getElementById('current_user_id').value = data.current_user_id;
+            }
         }
 
         // Image
@@ -427,7 +494,7 @@ $assets = $stmt->fetchAll();
         } else {
             imgPreview.style.display = 'none';
         }
-        
+
         formModal.show();
     }
 
@@ -462,7 +529,21 @@ $assets = $stmt->fetchAll();
         viewModal.show();
     }
 
-    function loadHistory(id) { fetch('get_history.php?id=' + id).then(r => r.text()).then(h => { document.getElementById('history_body').innerHTML = h; }); }
-    function loadTickets(code) { fetch('get_tickets.php?code=' + encodeURIComponent(code)).then(r => r.text()).then(h => { document.getElementById('ticket_body').innerHTML = h; }); }
-    function loadSoftware(id) { fetch('get_software.php?id=' + id).then(r => r.text()).then(h => { document.getElementById('software_body').innerHTML = h; }); }
+    function loadHistory(id) {
+        fetch('get_history.php?id=' + id).then(r => r.text()).then(h => {
+            document.getElementById('history_body').innerHTML = h;
+        });
+    }
+
+    function loadTickets(code) {
+        fetch('get_tickets.php?code=' + encodeURIComponent(code)).then(r => r.text()).then(h => {
+            document.getElementById('ticket_body').innerHTML = h;
+        });
+    }
+
+    function loadSoftware(id) {
+        fetch('get_software.php?id=' + id).then(r => r.text()).then(h => {
+            document.getElementById('software_body').innerHTML = h;
+        });
+    }
 </script>

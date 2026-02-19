@@ -55,16 +55,16 @@ $categories = $pdo->query($sql)->fetchAll();
                                     <th class="w-checkbox py-3 text-center">
                                         <input type="checkbox" class="form-check-input" id="checkAll" onclick="toggleAll(this)">
                                     </th>
+                                    <th class="text-center" style="width: 50px;">ลำดับ</th>
                                     <th class="ps-3">ชื่อหมวดหมู่</th>
                                     <th>สถานะ</th>
                                     <th class="text-end pe-3">จัดการ</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php foreach ($categories as $row):
+                                <?php $i = 1;
+                                foreach ($categories as $row):
                                     $json = htmlspecialchars(json_encode($row), ENT_QUOTES, 'UTF-8');
-
-                                    // ✅ แก้ไข: ตรวจสอบตัวแปร status ก่อนใช้งาน
                                     $status = isset($row['status']) ? $row['status'] : 'active';
                                     $status_badge = ($status == 'active')
                                         ? '<span class="badge bg-success">Active</span>'
@@ -74,6 +74,7 @@ $categories = $pdo->query($sql)->fetchAll();
                                         <td class="text-center">
                                             <input type="checkbox" class="form-check-input row-checkbox" value="<?= $row['id'] ?>" onclick="checkRow()">
                                         </td>
+                                        <td class="text-center text-muted small fw-bold"><?= $i++ ?></td>
 
                                         <td class="ps-3 fw-bold text-dark"><?= htmlspecialchars($row['name']) ?></td>
                                         <td><?= $status_badge ?></td>

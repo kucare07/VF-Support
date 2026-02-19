@@ -82,6 +82,7 @@ $logs = $stmt->fetchAll();
                                     <th class="w-checkbox py-3 text-center">
                                         <input type="checkbox" class="form-check-input" id="checkAll" onclick="toggleAll(this)">
                                     </th>
+                                    <th class="text-center" style="width: 50px;">ลำดับ</th>
                                     <th class="ps-3">วัน-เวลา</th>
                                     <th>ผู้ใช้งาน</th>
                                     <th>กิจกรรม (Action)</th>
@@ -90,8 +91,8 @@ $logs = $stmt->fetchAll();
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php foreach ($logs as $row):
-                                    // Format Badge Color
+                                <?php $i = 1;
+                                foreach ($logs as $row):
                                     $action_color = match (strtolower($row['action'])) {
                                         'login', 'logout' => 'info',
                                         'create', 'add' => 'success',
@@ -104,6 +105,7 @@ $logs = $stmt->fetchAll();
                                         <td class="text-center">
                                             <input type="checkbox" class="form-check-input row-checkbox" value="<?= $row['id'] ?>" onclick="checkRow()">
                                         </td>
+                                        <td class="text-center text-muted small fw-bold"><?= $i++ ?></td>
 
                                         <td class="ps-3 text-muted small" style="white-space:nowrap;">
                                             <?= date('d/m/Y H:i:s', strtotime($row['created_at'])) ?>

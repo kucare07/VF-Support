@@ -32,9 +32,16 @@ $assets = $pdo->query("SELECT id, asset_code, name FROM assets WHERE status = 'a
 
     <div class="main-content-scroll">
         <div class="container-fluid p-3">
-            
+
             <?php if (isset($_GET['msg'])): ?>
-                <script>Swal.fire({icon: 'success', title: 'สำเร็จ!', timer: 1500, showConfirmButton: false});</script>
+                <script>
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'สำเร็จ!',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+                </script>
             <?php endif; ?>
 
             <div class="card border-0 shadow-sm">
@@ -65,7 +72,7 @@ $assets = $pdo->query("SELECT id, asset_code, name FROM assets WHERE status = 'a
 
                 <div class="card-body p-0">
                     <div class="tab-content">
-                        
+
                         <div class="tab-pane fade show active" id="listView">
                             <div class="table-responsive">
                                 <table class="table table-hover table-sm align-middle mb-0 datatable">
@@ -74,6 +81,7 @@ $assets = $pdo->query("SELECT id, asset_code, name FROM assets WHERE status = 'a
                                             <th class="w-checkbox py-3 text-center">
                                                 <input type="checkbox" class="form-check-input" id="checkAll" onclick="toggleAll(this)">
                                             </th>
+                                            <th class="text-center" style="width: 50px;">ลำดับ</th>
                                             <th class="ps-3">ชื่องาน (Task)</th>
                                             <th>ทรัพย์สิน (Asset)</th>
                                             <th>ความถี่</th>
@@ -84,26 +92,22 @@ $assets = $pdo->query("SELECT id, asset_code, name FROM assets WHERE status = 'a
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <?php foreach ($plans as $row):
+                                        <?php $i = 1;
+                                        foreach ($plans as $row):
                                             $json = htmlspecialchars(json_encode($row), ENT_QUOTES, 'UTF-8');
-
-                                            // Status Logic for Due Date
                                             $due_html = '-';
-                                            $row_class = ''; // สีพื้นหลังแถว
-                                            
+                                            $row_class = '';
+
                                             if ($row['next_due_date']) {
                                                 $days_left = (strtotime($row['next_due_date']) - time()) / (60 * 60 * 24);
                                                 $date_str = date('d/m/Y', strtotime($row['next_due_date']));
 
                                                 if ($days_left < 0) {
-                                                    // เลยกำหนด (สีแดง)
                                                     $due_html = "<span class='text-danger fw-bold'><i class='bi bi-exclamation-circle-fill'></i> $date_str</span>";
-                                                    $row_class = 'bg-danger bg-opacity-10'; 
+                                                    $row_class = 'bg-danger bg-opacity-10';
                                                 } elseif ($days_left <= 7) {
-                                                    // ใกล้ถึง (สีเหลือง/ส้ม)
                                                     $due_html = "<span class='text-warning fw-bold text-dark'>$date_str</span>";
                                                 } else {
-                                                    // ปกติ (สีเขียว)
                                                     $due_html = "<span class='text-success'>$date_str</span>";
                                                 }
                                             }
@@ -112,6 +116,7 @@ $assets = $pdo->query("SELECT id, asset_code, name FROM assets WHERE status = 'a
                                                 <td class="text-center">
                                                     <input type="checkbox" class="form-check-input row-checkbox" value="<?= $row['id'] ?>" onclick="checkRow()">
                                                 </td>
+                                                <td class="text-center text-muted small fw-bold"><?= $i++ ?></td>
 
                                                 <td class="ps-3 fw-bold text-primary"><?= $row['name'] ?></td>
                                                 <td>
@@ -159,20 +164,20 @@ $assets = $pdo->query("SELECT id, asset_code, name FROM assets WHERE status = 'a
             <form action="process.php" method="POST">
                 <input type="hidden" name="action" id="p_action">
                 <input type="hidden" name="id" id="p_id">
-                
+
                 <div class="header-gradient">
                     <div class="d-flex justify-content-between align-items-center">
                         <h6 class="modal-title fw-bold m-0" id="p_title">สร้างแผน PM ใหม่</h6>
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                     </div>
                 </div>
-                
+
                 <div class="modal-body p-4 bg-white">
                     <div class="mb-3">
                         <label class="form-label small fw-bold">ชื่องาน (Task Name) <span class="text-danger">*</span></label>
                         <input type="text" name="name" id="name" class="form-control" placeholder="เช่น เป่าฝุ่น, ตรวจเช็คสภาพ" required>
                     </div>
-                    
+
                     <div class="mb-3">
                         <label class="form-label small fw-bold">ทรัพย์สิน (Asset) <span class="text-danger">*</span></label>
                         <select name="asset_id" id="asset_id" class="form-select select2" required>
@@ -182,7 +187,7 @@ $assets = $pdo->query("SELECT id, asset_code, name FROM assets WHERE status = 'a
                             <?php endforeach; ?>
                         </select>
                     </div>
-                    
+
                     <div class="row g-3 mb-3">
                         <div class="col-6">
                             <label class="form-label small fw-bold">ความถี่ (วัน)</label>
@@ -193,18 +198,18 @@ $assets = $pdo->query("SELECT id, asset_code, name FROM assets WHERE status = 'a
                             <input type="date" name="next_due_date" id="next_due_date" class="form-control" required>
                         </div>
                     </div>
-                    
+
                     <div class="mb-3">
                         <label class="form-label small fw-bold">หมายเหตุ / วิธีการ</label>
                         <textarea name="notes" id="notes" class="form-control" rows="3" placeholder="รายละเอียดการทำงาน..."></textarea>
                     </div>
-                    
+
                     <div class="form-check bg-light p-2 rounded border">
                         <input class="form-check-input ms-1" type="checkbox" name="status" id="status" value="active" checked>
                         <label class="form-check-label small fw-bold ms-2" for="status">เปิดใช้งานแผนนี้ (Active)</label>
                     </div>
                 </div>
-                
+
                 <div class="modal-footer py-2 border-top bg-light">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
                     <button type="submit" class="btn btn-primary px-4 fw-bold hover-scale">บันทึก</button>
@@ -217,32 +222,53 @@ $assets = $pdo->query("SELECT id, asset_code, name FROM assets WHERE status = 'a
 <div class="modal fade" id="viewModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content rounded-4 border-0 shadow">
-            
+
             <div class="header-gradient">
                 <div class="d-flex justify-content-between align-items-center">
                     <h6 class="modal-title fw-bold m-0"><i class="bi bi-clipboard-check me-2"></i>รายละเอียดแผน PM</h6>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
             </div>
-            
+
             <div class="modal-body p-4">
                 <div class="text-center mb-4">
                     <h5 class="fw-bold mb-1" id="v_name"></h5>
                     <span class="badge bg-secondary" id="v_status"></span>
                 </div>
-                
+
                 <table class="table table-sm table-borderless small mb-0">
-                    <tr><td class="fw-bold text-muted w-35">รหัสทรัพย์สิน:</td><td id="v_asset_code"></td></tr>
-                    <tr><td class="fw-bold text-muted">ชื่อทรัพย์สิน:</td><td id="v_asset_name"></td></tr>
-                    <tr><td class="fw-bold text-muted">สถานที่:</td><td id="v_location"></td></tr>
-                    <tr><td class="fw-bold text-muted">ความถี่:</td><td>ทุกๆ <span id="v_freq"></span> วัน</td></tr>
-                    <tr><td class="fw-bold text-muted">ทำล่าสุด:</td><td id="v_last_done"></td></tr>
-                    <tr><td class="fw-bold text-muted">กำหนดถัดไป:</td><td id="v_next_due" class="fw-bold text-primary"></td></tr>
-                    <tr><td class="fw-bold text-muted">หมายเหตุ:</td><td id="v_notes" class="text-muted fst-italic"></td></tr>
+                    <tr>
+                        <td class="fw-bold text-muted w-35">รหัสทรัพย์สิน:</td>
+                        <td id="v_asset_code"></td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold text-muted">ชื่อทรัพย์สิน:</td>
+                        <td id="v_asset_name"></td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold text-muted">สถานที่:</td>
+                        <td id="v_location"></td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold text-muted">ความถี่:</td>
+                        <td>ทุกๆ <span id="v_freq"></span> วัน</td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold text-muted">ทำล่าสุด:</td>
+                        <td id="v_last_done"></td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold text-muted">กำหนดถัดไป:</td>
+                        <td id="v_next_due" class="fw-bold text-primary"></td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold text-muted">หมายเหตุ:</td>
+                        <td id="v_notes" class="text-muted fst-italic"></td>
+                    </tr>
                 </table>
 
                 <hr class="my-4">
-                
+
                 <div class="d-grid">
                     <a href="#" id="btnComplete" class="btn btn-success fw-bold shadow-sm hover-scale" onclick="return confirm('ยืนยันว่าบำรุงรักษาเสร็จสิ้นแล้ว?\nระบบจะคำนวณวันนัดครั้งต่อไปให้อัตโนมัติ')">
                         <i class="bi bi-check-circle-fill me-2"></i> บันทึกว่าบำรุงรักษาเรียบร้อย
@@ -292,7 +318,7 @@ $assets = $pdo->query("SELECT id, asset_code, name FROM assets WHERE status = 'a
         });
 
         // Re-render calendar when tab shown
-        document.getElementById('calendar-tab').addEventListener('shown.bs.tab', function (e) {
+        document.getElementById('calendar-tab').addEventListener('shown.bs.tab', function(e) {
             calendar.render();
         });
     });
@@ -305,7 +331,9 @@ $assets = $pdo->query("SELECT id, asset_code, name FROM assets WHERE status = 'a
         document.forms[0].reset();
 
         // Reset Select2 if used
-        if(window.$ && $.fn.select2) { $('#asset_id').val(null).trigger('change'); }
+        if (window.$ && $.fn.select2) {
+            $('#asset_id').val(null).trigger('change');
+        }
 
         if (action == 'add') {
             document.getElementById('next_due_date').valueAsDate = new Date();
@@ -315,10 +343,13 @@ $assets = $pdo->query("SELECT id, asset_code, name FROM assets WHERE status = 'a
             const d = JSON.parse(json);
             document.getElementById('p_id').value = d.id;
             document.getElementById('name').value = d.name;
-            
-            if(window.$ && $.fn.select2) { $('#asset_id').val(d.asset_id).trigger('change'); }
-            else { document.getElementById('asset_id').value = d.asset_id; }
-            
+
+            if (window.$ && $.fn.select2) {
+                $('#asset_id').val(d.asset_id).trigger('change');
+            } else {
+                document.getElementById('asset_id').value = d.asset_id;
+            }
+
             document.getElementById('frequency_days').value = d.frequency_days;
             document.getElementById('next_due_date').value = d.next_due_date;
             document.getElementById('notes').value = d.notes;
@@ -333,22 +364,22 @@ $assets = $pdo->query("SELECT id, asset_code, name FROM assets WHERE status = 'a
         document.getElementById('v_name').innerText = d.name;
         document.getElementById('v_status').innerText = d.status.toUpperCase();
         document.getElementById('v_status').className = 'badge ' + (d.status == 'active' ? 'bg-success' : 'bg-secondary');
-        
+
         document.getElementById('v_asset_code').innerText = d.asset_code || '-';
         document.getElementById('v_asset_name').innerText = d.asset_name || '-';
         document.getElementById('v_location').innerText = d.location_name || '-';
         document.getElementById('v_freq').innerText = d.frequency_days;
-        
+
         // Date Formatting
         const formatDate = (dateStr) => dateStr ? new Date(dateStr).toLocaleDateString('th-TH') : '-';
         document.getElementById('v_last_done').innerText = formatDate(d.last_done_date);
         document.getElementById('v_next_due').innerText = formatDate(d.next_due_date);
-        
+
         document.getElementById('v_notes').innerText = d.notes || '-';
-        
+
         // Update Action Link
         document.getElementById('btnComplete').href = `process.php?action=complete&id=${d.id}`;
-        
+
         viewModal.show();
     }
 </script>
