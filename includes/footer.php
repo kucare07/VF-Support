@@ -146,25 +146,50 @@
         });
     }
 
-    // ---------------------------------------------------------
-    // 5. ฟังก์ชันลบรายการเดียว (Standard Delete)
-    // ---------------------------------------------------------
-    function confirmDelete(url, message = 'คุณแน่ใจหรือไม่ที่จะลบรายการนี้?') {
-        Swal.fire({
-            title: 'ยืนยันการลบ',
-            text: message,
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#d33',
-            cancelButtonColor: '#3085d6',
-            confirmButtonText: 'ลบ',
-            cancelButtonText: 'ยกเลิก'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                window.location.href = url;
+    function confirmDelete(url, text = 'คุณต้องการลบข้อมูลนี้ใช่หรือไม่?') {
+    Swal.fire({
+        title: 'ยืนยันการลบ?',
+        text: text,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'ใช่, ลบเลย!',
+        cancelButtonText: 'ยกเลิก'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // สร้าง Form เพื่อส่งข้อมูลแบบ POST (ปลอดภัยกว่า GET)
+            const form = document.createElement('form');
+            form.method = 'POST';
+            
+            // แยก URL และ Parameters
+            const [actionUrl, queryString] = url.split('?');
+            form.action = actionUrl;
+            
+            if (queryString) {
+                const params = new URLSearchParams(queryString);
+                for (const [key, value] of params) {
+                    const hiddenField = document.createElement('input');
+                    hiddenField.type = 'hidden';
+                    hiddenField.name = key;
+                    hiddenField.value = value;
+                    form.appendChild(hiddenField);
+                }
             }
-        });
-    }
+            
+            // แนบ CSRF Token
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+            const csrfField = document.createElement('input');
+            csrfField.type = 'hidden';
+            csrfField.name = 'csrf_token';
+            csrfField.value = csrfToken || '';
+            form.appendChild(csrfField);
+
+            document.body.appendChild(form);
+            form.submit();
+        }
+    });
+}
 </script>
 
 </body>

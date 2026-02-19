@@ -1,9 +1,12 @@
 <?php
 // config/db_connect.php
-$host = 'localhost'; // หรือลองเปลี่ยนเป็น 127.0.0.1 หาก localhost มีปัญหา
-$db   = 'it_support_db';
-$user = 'root';
-$pass = '';
+
+// โหลดจาก Environment Variables ของ Server (ถ้ามี) ถ้าไม่มีให้ใช้ค่า Default (สำหรับ Local)
+// วิธีนี้ทำให้ตอนเอาขึ้น Production (Server จริง) เราไปตั้งค่า ENV ที่ Server แทน ไม่ต้องฝังรหัสในโค้ด
+$host = getenv('DB_HOST') ?: '127.0.0.1'; // แนะนำใช้ 127.0.0.1 แทน localhost เพื่อลดปัญหา Socket
+$db   = getenv('DB_NAME') ?: 'it_support_db';
+$user = getenv('DB_USER') ?: 'root'; 
+$pass = getenv('DB_PASS') ?: '';     
 $charset = 'utf8mb4';
 
 $dsn = "mysql:host=$host;dbname=$db;charset=$charset";
@@ -16,19 +19,9 @@ $options = [
 try {
     $pdo = new PDO($dsn, $user, $pass, $options);
 } catch (\PDOException $e) {
-    // แสดง Error แบบ User-Friendly
-    die('
-        <div style="font-family: sans-serif; text-align: center; padding: 50px;">
-            <h2 style="color: red;">❌ ไม่สามารถเชื่อมต่อฐานข้อมูลได้</h2>
-            <p>Connection failed: ' . htmlspecialchars($e->getMessage()) . '</p>
-            <hr>
-            <p style="color: #666;">
-                <b>คำแนะนำ:</b><br>
-                1. ตรวจสอบว่าเปิด XAMPP/MySQL หรือยัง<br>
-                2. ตรวจสอบชื่อฐานข้อมูล (<code>' . $db . '</code>) ว่ามีอยู่จริง<br>
-                3. หากใช้ Mac/Linux ลองเปลี่ยน Host จาก <code>localhost</code> เป็น <code>127.0.0.1</code>
-            </p>
-        </div>
-    ');
+    // ปิดการแสดง Error ตรงๆ (ตามที่ QA แนะนำเพื่อไม่ให้เปิดเผยข้อมูล)
+    error_log("DB Connection failed: " . $e->getMessage()); // เก็บลง log แทน
+    header('HTTP/1.1 503 Service Unavailable');
+    die("ระบบขัดข้อง ไม่สามารถเชื่อมต่อฐานข้อมูลได้ กรุณาติดต่อผู้ดูแลระบบ"); 
 }
 ?>

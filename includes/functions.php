@@ -271,8 +271,8 @@ if (!function_exists('sendLinePush')) {
 
         // --- ✅ จุดแก้ Error Connection ---
         curl_setopt($ch, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4); // บังคับใช้ IPv4
-        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0); // ปิดเช็ค SSL
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0); // ปิดเช็ค SSL
+        //curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0); // ปิดเช็ค SSL
+        //curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0); // ปิดเช็ค SSL
         curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 15); // เพิ่มเวลารอ
         curl_setopt($ch, CURLOPT_TIMEOUT, 15);
         // -------------------------------

@@ -1,4 +1,19 @@
 <?php
+if (session_status() === PHP_SESSION_NONE) session_start();
+
+// --- Rate Limiting: ห้ามส่งคำขอซ้ำภายใน 30 วินาที ---
+$rate_limit_seconds = 30;
+if (isset($_SESSION['last_public_submit']) && (time() - $_SESSION['last_public_submit']) < $rate_limit_seconds) {
+    header('Content-Type: application/json');
+    $wait_time = $rate_limit_seconds - (time() - $_SESSION['last_public_submit']);
+    echo json_encode(['status' => 'error', 'message' => "กรุณารอ $wait_time วินาทีก่อนทำรายการใหม่ เพื่อป้องกันระบบค้าง"]);
+    exit;
+}
+// บันทึกเวลาที่ทำรายการล่าสุด (เมื่อมีการ POST เข้ามา)
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $_SESSION['last_public_submit'] = time();
+}
+// ----------------------------------------------------
 require_once 'config/db_connect.php';
 require_once 'includes/functions.php'; // ✅ เพิ่มบรรทัดนี้เพื่อให้เรียกใช้ sendLineNotify ได้
 

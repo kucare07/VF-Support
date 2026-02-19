@@ -1,4 +1,17 @@
 <?php
+if (session_status() === PHP_SESSION_NONE) session_start();
+
+// --- Rate Limiting: ห้ามค้นหาถี่เกินไป (ป้องกัน Brute-force เลข Ticket) ---
+$rate_limit_seconds = 5; // ค้นหาได้ทุกๆ 5 วินาที
+if (isset($_SESSION['last_track_search']) && (time() - $_SESSION['last_track_search']) < $rate_limit_seconds) {
+    header('Content-Type: application/json');
+    echo json_encode(['status' => 'error', 'message' => 'ค้นหาบ่อยเกินไป กรุณารอสักครู่...']);
+    exit;
+}
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $_SESSION['last_track_search'] = time();
+}
+// ----------------------------------------------------
 // track_status.php - API สำหรับค้นหางานซ่อม (ไม่ต้อง Login)
 require_once 'config/db_connect.php';
 

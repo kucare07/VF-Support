@@ -1,7 +1,18 @@
 <?php
 require_once '../../includes/auth.php';
 require_once '../../config/db_connect.php';
+// --- ตรวจสอบ CSRF Token และบังคับใช้ POST ---
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $token = $_POST['csrf_token'] ?? '';
+    if (!validateCSRFToken($token)) {
+        error_log("CSRF Token Validation Failed for user: " . ($_SESSION['user_id'] ?? 'unknown') . " on " . $_SERVER['REQUEST_URI']);
+        die("⛔ ขออภัย, ระบบปฏิเสธการทำรายการเนื่องจากตรวจพบความเสี่ยงด้านความปลอดภัย (Invalid CSRF Token)");
+    }
+}
+// ------------------------------------------
 
+// จากนั้นเปลี่ยนการรับค่า $action จาก $_GET/$_REQUEST เป็น $_POST ทั้งหมด (เพราะเราเปลี่ยนปุ่มลบเป็น POST แล้ว)
+$action = $_POST['action'] ?? '';
 $action = $_REQUEST['action'] ?? '';
 
 // --- 1. จัดการข้อมูลสินค้า (Add/Edit) ---
