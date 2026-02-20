@@ -1,4 +1,5 @@
 <?php
+
 ob_start(); // เริ่มต้น Buffer ทันที ห้ามมีอะไรก่อนบรรทัดนี้
 session_start();
 
